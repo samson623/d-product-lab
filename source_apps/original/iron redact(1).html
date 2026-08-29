@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IronRedact — Provable Offline PDF Redaction</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<style>
+:root{
+  --bg:#0e1116; --panel:#161b23; --panel2:#1c222c; --line:#2a3240; --line2:#39445699;
+  --txt:#e6ebf2; --dim:#93a1b5; --acc:#4c8dff; --acc2:#2f6ee0; --ok:#2fbf71; --warn:#e8b33a; --bad:#ef5350;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--txt);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--txt);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 8px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--acc)}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:7px 12px;transition:.12s}
+.btn:hover{border-color:#4a5costa;border-color:#4a5668;background:#222a36}
+.btn.pri{background:var(--acc2);border-color:var(--acc);font-weight:600}
+.btn.pri:hover{background:var(--acc)}
+.btn.pri:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:4px 8px;font-size:12.5px}
+.btn.on{background:#1d3a6b;border-color:var(--acc)}
+
+#app{display:grid;grid-template-rows:52px 1fr 40px;height:100%}
+header{display:flex;align-items:center;gap:14px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+.logo{font-weight:800;letter-spacing:-.4px;font-size:16px}
+.logo span{color:var(--acc)}
+.tag{color:var(--dim);font-size:12px;border-left:1px solid var(--line);padding-left:14px}
+.spacer{flex:1}
+.badge{font-family:var(--mono);font-size:11.5px;padding:5px 9px;border-radius:999px;border:1px solid #24503a;background:#12251b;color:#5fd39a}
+.badge.hot{border-color:#5a3320;background:#2a1712;color:#ffab7a}
+
+main{display:grid;grid-template-columns:330px 1fr;min-height:0}
+aside{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:12px}
+.sec{border:1px solid var(--line);border-radius:9px;margin-bottom:12px;overflow:hidden}
+.sec>h3{margin:0;font-size:11.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--dim);padding:9px 11px;background:var(--panel2);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.sec>h3 .n{margin-left:auto;font-family:var(--mono);color:var(--acc)}
+.secb{padding:11px}
+.row{display:flex;gap:8px;align-items:center}
+.row+.row{margin-top:8px}
+label.chk{display:flex;gap:9px;align-items:flex-start;padding:6px 4px;border-radius:6px;cursor:pointer}
+label.chk:hover{background:#1e2531}
+label.chk input{margin-top:2px;accent-color:var(--acc)}
+label.chk .lab{flex:1;min-width:0}
+label.chk .cnt{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+.samp{font-family:var(--mono);font-size:11px;color:#7e8ea4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.hint{color:var(--dim);font-size:12px;line-height:1.5}
+.drop{border:1.5px dashed var(--line2);border-radius:9px;padding:22px 12px;text-align:center;color:var(--dim);cursor:pointer;transition:.15s}
+.drop:hover,.drop.over{border-color:var(--acc);color:var(--txt);background:#141d2c}
+
+#stage{overflow:auto;background:#0a0d12;display:flex;justify-content:center;align-items:flex-start;padding:22px}
+#wrap{position:relative;box-shadow:0 10px 40px #0009;background:#fff;flex:none}
+#cv{display:block}
+#ovl{position:absolute;inset:0;cursor:crosshair}
+.rbox{position:absolute;background:#000;border:1px solid #ff4d4d;box-shadow:0 0 0 1px #0008}
+.rbox:hover{background:#161616;border-color:#fff}
+.rbox .x{position:absolute;top:-9px;right:-9px;width:18px;height:18px;border-radius:50%;background:#ef5350;color:#fff;font-size:12px;line-height:17px;text-align:center;display:none}
+.rbox:hover .x{display:block}
+.hl{position:absolute;background:#4c8dff44;border:1px solid var(--acc);pointer-events:none}
+#drag{position:absolute;background:#00000088;border:1px dashed #fff;pointer-events:none;display:none}
+
+footer{display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--panel);border-top:1px solid var(--line);font-size:12.5px;color:var(--dim)}
+footer input{width:52px;text-align:center;padding:3px}
+
+.modal{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+.modal.show{display:flex}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;max-width:720px;width:100%;max-height:86vh;overflow:auto;padding:20px}
+.card h2{margin:0 0 4px;font-size:18px}
+.kv{display:grid;grid-template-columns:190px 1fr;gap:6px 12px;font-size:13px;margin:14px 0}
+.kv .k{color:var(--dim)}
+.kv .v{font-family:var(--mono);word-break:break-all}
+.verdict{border-radius:9px;padding:12px 14px;margin:6px 0 2px;font-weight:600}
+.verdict.ok{background:#10281c;border:1px solid #2b6b48;color:#7fe0ac}
+.verdict.bad{background:#2a1414;border:1px solid #7a3030;color:#ff9d9d}
+.bar{height:6px;background:var(--panel2);border-radius:99px;overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--acc);width:0;transition:.2s}
+code{font-family:var(--mono);background:#0d1219;padding:1px 5px;border-radius:4px;font-size:12px}
+.toast{position:fixed;bottom:56px;left:50%;transform:translateX(-50%);background:#1d2531;border:1px solid var(--line);padding:9px 16px;border-radius:8px;z-index:60;opacity:0;transition:.25s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">Iron<span>Redact</span></div>
+    <div class="tag">Destructive redaction &middot; nothing leaves this device</div>
+    <div class="spacer"></div>
+    <div class="badge" id="netBadge">SANDBOX &middot; 0 outbound requests</div>
+    <button class="btn sm" id="btnBundle" title="Rebuild this app as one self-contained offline HTML file">Save offline copy</button>
+    <button class="btn sm" id="btnLic">Licence</button>
+  </header>
+
+  <main>
+    <aside>
+      <div class="sec">
+        <h3>1 &middot; Document</h3>
+        <div class="secb">
+          <div class="drop" id="drop">Drop a PDF here<br><span style="font-size:12px">or click to browse</span></div>
+          <input type="file" id="file" accept="application/pdf" hidden>
+          <div id="docInfo" class="hint" style="margin-top:10px"></div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <h3>2 &middot; Automatic scan <span class="n" id="scanN"></span></h3>
+        <div class="secb" id="scanBox"><div class="hint">Load a document to scan every page for identifiers. Detection runs on the extracted text layer with real checksum validation (Luhn, ABA, ISO&nbsp;7064, VIN).</div></div>
+      </div>
+
+      <div class="sec">
+        <h3>3 &middot; Custom terms</h3>
+        <div class="secb">
+          <textarea id="terms" rows="3" style="width:100%;resize:vertical" placeholder="One per line: client names, addresses, case numbers…"></textarea>
+          <div class="row" style="margin-top:8px">
+            <button class="btn sm" id="btnTerms">Find &amp; mark all</button>
+            <label class="hint" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="tCase"> match case</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <h3>4 &middot; Manual marks <span class="n" id="markN">0</span></h3>
+        <div class="secb">
+          <div class="row">
+            <button class="btn sm on" id="mBox">Draw box</button>
+            <button class="btn sm" id="mWord">Click word</button>
+            <button class="btn sm" id="btnUndo" title="Ctrl+Z">Undo</button>
+          </div>
+          <label class="chk"><input type="checkbox" id="allPages"><span class="lab">Repeat new boxes on <b>every page</b> <span class="samp">for letterheads, headers, footers</span></span></label>
+          <div class="row"><button class="btn sm" id="btnPage">Black out this page</button><button class="btn sm" id="btnClear">Clear page</button></div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <h3>5 &middot; Output</h3>
+        <div class="secb">
+          <div class="row"><span class="hint" style="width:78px">Quality</span>
+            <select id="dpi" style="flex:1"><option value="150">150 DPI — email</option><option value="200" selected>200 DPI — filing</option><option value="300">300 DPI — print / OCR</option></select></div>
+          <div class="row"><span class="hint" style="width:78px">Encoding</span>
+            <select id="enc" style="flex:1"><option value="jpeg">JPEG — small file</option><option value="png">PNG — lossless text</option></select></div>
+          <label class="chk"><input type="checkbox" id="txtLayer"><span class="lab">Keep output searchable <span class="samp">re-embeds surviving text invisibly</span></span></label>
+          <label class="chk"><input type="checkbox" id="stripMeta" checked><span class="lab">Strip metadata, annotations, attachments, JS</span></label>
+          <button class="btn pri" id="btnGo" style="width:100%;margin-top:10px" disabled>Redact &amp; verify</button>
+          <div class="bar" id="bar" style="display:none"><i></i></div>
+        </div>
+      </div>
+      <div class="hint" style="text-align:center;padding-bottom:14px">Free tier: documents up to 5 pages.<br>Licensed: unlimited.</div>
+    </aside>
+
+    <div id="stage">
+      <div id="wrap" style="display:none">
+        <canvas id="cv"></canvas>
+        <div id="ovl"><div id="drag"></div></div>
+      </div>
+      <div id="empty" class="hint" style="margin-top:16vh;text-align:center;max-width:460px">
+        <div style="font-size:17px;color:var(--txt);margin-bottom:8px">Black boxes are not redaction.</div>
+        Drawing a rectangle in Preview, Word or most "free PDF editors" leaves the original text sitting under it, fully selectable and searchable. IronRedact rasterises every page, discards the original content stream, and then re-opens its own output to prove the text is gone.
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <button class="btn sm" id="pPrev">&#8592;</button>
+    <span>Page <input id="pNum" value="1"> / <b id="pTot">0</b></span>
+    <button class="btn sm" id="pNext">&#8594;</button>
+    <span style="margin-left:14px">Zoom</span>
+    <button class="btn sm" id="zOut">&minus;</button><b id="zVal">100%</b><button class="btn sm" id="zIn">+</button>
+    <button class="btn sm" id="zFit">Fit</button>
+    <div class="spacer"></div>
+    <span id="status">Ready</span>
+  </footer>
+</div>
+
+<div class="modal" id="mReport"><div class="card" id="reportCard"></div></div>
+<div class="modal" id="mLic"><div class="card" style="max-width:460px">
+  <h2>Licence</h2>
+  <p class="hint">The free tier handles documents up to five pages. A licence key removes the limit; it is validated locally and stored in this browser.</p>
+  <input id="licKey" placeholder="IRC-XXXX-XXXX-XXXX" style="width:100%;font-family:var(--mono);text-transform:uppercase">
+  <div id="licMsg" class="hint" style="margin:8px 0;min-height:18px"></div>
+  <div class="row"><button class="btn pri" id="licSave">Activate</button><button class="btn" id="licClose">Close</button></div>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================================
+   IronRedact — single-file, offline-first, destructive PDF redaction.
+   Architecture:
+     1. NET sentinel      — wraps fetch/XHR/beacon/WebSocket, hard-locks after boot.
+     2. Loader            — pulls pdf.js + pdf-lib, converts the worker to a Blob
+                            URL so zero requests happen after lock. Reads embedded
+                            base64 copies first when running as an offline bundle.
+     3. Text geometry     — getTextContent() transforms -> user-space quads ->
+                            viewport rectangles, rotation-safe.
+     4. Detectors         — regex + real checksums (Luhn / ABA / ISO 7064 / VIN).
+     5. Compositor        — render page @N DPI, paint opaque rects onto the raster,
+                            embed as a new page. Original content stream is dropped.
+     6. Verifier          — re-parses the produced bytes, extracts all text,
+                            re-runs detectors, hashes the file (SHA-256).
+   ========================================================================== */
+const SELF_HTML = '<!DOCTYPE html>\n<html lang="en">\n' + document.documentElement.innerHTML + '\n</html>';
+
+const CDN = {
+  pdfjs : 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+  worker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+  pdflib: 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js'
+};
+
+/* ---------- 1. network sentinel ------------------------------------------ */
+const NET = {open:true, blocked:0, out:0};
+(function(){
+  const f = window.fetch ? window.fetch.bind(window) : null;
+  window.fetch = function(...a){
+    if(!NET.open){ NET.blocked++; paintNet(); return Promise.reject(new Error('IronRedact sentinel: outbound request blocked')); }
+    NET.out++; paintNet(); return f(...a);
+  };
+  const xo = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(...a){
+    if(!NET.open){ NET.blocked++; paintNet(); throw new Error('IronRedact sentinel: outbound request blocked'); }
+    NET.out++; paintNet(); return xo.apply(this,a);
+  };
+  if(navigator.sendBeacon) navigator.sendBeacon = () => { NET.blocked++; paintNet(); return false; };
+  const WS = window.WebSocket;
+  window.WebSocket = function(...a){ if(!NET.open){ NET.blocked++; paintNet(); throw new Error('blocked'); } return new WS(...a); };
+})();
+function paintNet(){
+  const b = document.getElementById('netBadge'); if(!b) return;
+  if(NET.blocked){ b.className='badge hot'; b.textContent = 'SANDBOX · '+NET.blocked+' request'+(NET.blocked>1?'s':'')+' blocked'; }
+  else b.textContent = 'SANDBOX · 0 outbound requests' + (NET.open ? ' · booting' : '');
+}
+
+/* ---------- tiny helpers -------------------------------------------------- */
+const $  = s => document.querySelector(s);
+const el = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+let toastT;
+function toast(m){ const t=el('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2200); }
+function setStatus(m){ el('status').textContent = m; }
+function b64FromBytes(u8){ let s='', C=0x8000; for(let i=0;i<u8.length;i+=C) s+=String.fromCharCode.apply(null,u8.subarray(i,i+C)); return btoa(s); }
+function bytesFromB64(b){ const bin=atob(b.replace(/\s+/g,'')); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return u; }
+
+/* ---------- checksums ----------------------------------------------------- */
+function luhn(d){ let s=0,alt=false; for(let i=d.length-1;i>=0;i--){ let n=+d[i]; if(alt){ n*=2; if(n>9) n-=9; } s+=n; alt=!alt; } return d.length>0 && s%10===0; }
+function abaOK(d){ if(d.length!==9) return false; const n=[...d].map(Number);
+  return (3*(n[0]+n[3]+n[6]) + 7*(n[1]+n[4]+n[7]) + (n[2]+n[5]+n[8])) % 10 === 0 && !/^0{9}$/.test(d); }
+function npiOK(d){ return d.length===10 && luhn('80840'+d); }
+function ibanOK(s){ const t=s.toUpperCase(); if(t.length<15||t.length>34) return false;
+  const r=(t.slice(4)+t.slice(0,4)).replace(/[A-Z]/g,c=>c.charCodeAt(0)-55);
+  let rem=0; for(const ch of r) rem=(rem*10+(+ch))%97; return rem===1; }
+function vinOK(v){ if(v.length!==17) return false;
+  const map={A:1,B:2,C:3,D:4,E:5,F:6,G:7,H:8,J:1,K:2,L:3,M:4,N:5,P:7,R:9,S:2,T:3,U:4,V:5,W:6,X:7,Y:8,Z:9};
+  const w=[8,7,6,5,4,3,2,10,0,9,8,7,6,5,4,3,2]; let s=0;
+  for(let i=0;i<17;i++){ const c=v[i]; const n = /\d/.test(c) ? +c : map[c]; if(n===undefined) return false; s+=n*w[i]; }
+  const r=s%11, cd=r===10?'X':String(r); return v[8]===cd; }
+
+/* ---------- 4. detectors -------------------------------------------------- */
+const DETECTORS = [
+  {id:'ssn',   label:'Social Security numbers',        on:true,  re:/\b\d{3}[-\u2010-\u2015 ]\d{2}[-\u2010-\u2015 ]\d{4}\b/g},
+  {id:'card',  label:'Payment card numbers (Luhn)',    on:true,  re:/\b(?:\d[ -]?){12,18}\d\b/g,
+               ok:s=>{const d=s.replace(/\D/g,''); return d.length>=13&&d.length<=19&&luhn(d);}},
+  {id:'email', label:'Email addresses',                on:true,  re:/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g},
+  {id:'phone', label:'Telephone numbers',              on:true,  re:/(?:\+?\d{1,2}[ .-]?)?\(?\d{3}\)?[ .-]\d{3}[ .-]\d{4}\b/g},
+  {id:'acct',  label:'Labelled account / MRN / policy',on:true,  re:/\b(?:MRN|Member(?:\s*ID)?|Patient\s*ID|Account|Acct|Policy|Claim|Case|File|Invoice|Docket)\s*(?:No\.?|Number|#|ID)?\s*[:#]?\s*[A-Z0-9][A-Z0-9\/-]{3,19}\b/gi},
+  {id:'date',  label:'Dates / dates of birth',         on:false, re:/\b(?:0?[1-9]|1[0-2])[\/.-](?:0?[1-9]|[12]\d|3[01])[\/.-](?:19|20)?\d{2}\b/g},
+  {id:'aba',   label:'Bank routing numbers (ABA)',     on:false, re:/\b\d{9}\b/g,  ok:abaOK},
+  {id:'npi',   label:'NPI provider identifiers',       on:false, re:/\b\d{10}\b/g, ok:npiOK},
+  {id:'iban',  label:'IBANs (ISO 7064 mod-97)',        on:false, re:/\b[A-Z]{2}\d{2}[A-Z0-9]{10,30}\b/g, ok:ibanOK},
+  {id:'vin',   label:'Vehicle VINs (check digit)',     on:false, re:/\b[A-HJ-NPR-Z0-9]{17}\b/g, ok:vinOK},
+  {id:'icd',   label:'ICD-10 diagnosis codes',         on:false, re:/\b[A-TV-Z]\d[0-9A-Z](?:\.[0-9A-Z]{1,4})?\b/g},
+  {id:'ip',    label:'IP addresses',                   on:false, re:/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, ok:s=>s.split('.').every(o=>+o<256)}
+];
+
+/* ---------- state --------------------------------------------------------- */
+const S = {
+  bytes:null, name:'document.pdf', doc:null, pages:0, cur:1, zoom:1, fit:true,
+  cache:new Map(), marks:[], undo:[], mode:'box', found:new Map(), pro:false, seq:0, busy:false
+};
+
+/* ---------- 2. loader ----------------------------------------------------- */
+function runScript(code){ const s=document.createElement('script'); s.textContent=code; document.head.appendChild(s); }
+async function grabText(url, embId){
+  const emb = document.getElementById(embId);
+  if(emb && emb.textContent.trim()) return new TextDecoder().decode(bytesFromB64(emb.textContent));
+  const r = await fetch(url); if(!r.ok) throw new Error('cannot load '+url);
+  return await r.text();
+}
+async function boot(){
+  try{
+    if(!window.pdfjsLib){ runScript(await grabText(CDN.pdfjs,'emb-pdfjs')); }
+    if(!window.PDFLib)  { runScript(await grabText(CDN.pdflib,'emb-pdflib')); }
+    const w = await grabText(CDN.worker,'emb-worker');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([w],{type:'application/javascript'}));
+  }catch(e){
+    setStatus('Library load failed — offline without an embedded bundle?'); console.error(e); return;
+  }
+  NET.open = false;                       // hard lock: from here on, nothing goes out
+  paintNet();
+  S.pro = checkKey(localStorage.getItem('ironredact.key')||'');
+  setStatus(S.pro ? 'Ready · licensed' : 'Ready · free tier');
+}
+
+/* ---------- 3. page data + text geometry ---------------------------------- */
+async function pageData(n){
+  if(S.cache.has(n)) return S.cache.get(n);
+  const page = await S.doc.getPage(n);
+  const vp   = page.getViewport({scale:1});
+  const tc   = await page.getTextContent();
+  const items = tc.items.filter(i => typeof i.str === 'string');
+  let full = '', idx = [], prev = null;
+  items.forEach((it,ii) => {
+    if(prev){
+      const sx = Math.hypot(it.transform[0],it.transform[1]) || 1;
+      const sameLine = Math.abs(it.transform[5] - prev.transform[5]) < 2.5;
+      const gap = it.transform[4] - (prev.transform[4] + (prev.width||0));
+      if(prev.hasEOL || !sameLine){ full += '\n'; idx.push(null); }
+      else if(gap > 0.18*sx){ full += ' '; idx.push(null); }
+    }
+    for(let k=0;k<it.str.length;k++) idx.push([ii,k]);
+    full += it.str; prev = it;
+  });
+  const d = {page, vp, items, full, idx};
+  S.cache.set(n,d); return d;
+}
+/* substring of a text item -> axis-aligned rect in viewport(scale 1) space */
+function subRect(pd, ii, k0, k1){
+  const it = pd.items[ii], t = it.transform, len = it.str.length || 1;
+  const sx = Math.hypot(t[0],t[1]) || 1, sy = Math.hypot(t[2],t[3]) || it.height || 10;
+  const ux=t[0]/sx, uy=t[1]/sx, vx=t[2]/sy, vy=t[3]/sy;
+  const w0 = it.width || sx*len*0.5;
+  const x0 = w0*(k0/len), w = Math.max(w0*((k1-k0)/len), sy*0.35);
+  const h  = it.height || sy;
+  const px = h*0.10, up = h*0.32, dn = h*0.30;
+  const bx = t[4] + ux*(x0-px), by = t[5] + uy*(x0-px), W = w + 2*px;
+  const pts = [[0,-dn],[W,-dn],[W,h+up],[0,h+up]]
+    .map(([a,b]) => pdfjsLib.Util.applyTransform([bx+ux*a+vx*b, by+uy*a+vy*b], pd.vp.transform));
+  const xs = pts.map(p=>p[0]), ys = pts.map(p=>p[1]);
+  return {x:Math.min(...xs), y:Math.min(...ys), w:Math.max(...xs)-Math.min(...xs), h:Math.max(...ys)-Math.min(...ys)};
+}
+function rangeRects(pd, s, e){
+  const g = new Map();
+  for(let i=s;i<e;i++){ const m = pd.idx[i]; if(!m) continue;
+    const cur = g.get(m[0]) || [1e9,-1]; cur[0]=Math.min(cur[0],m[1]); cur[1]=Math.max(cur[1],m[1]); g.set(m[0],cur); }
+  return [...g].map(([ii,[a,b]]) => subRect(pd,ii,a,b+1)).filter(r => r.w>0.5 && r.h>0.5);
+}
+
+/* ---------- document open -------------------------------------------------- */
+async function openFile(f){
+  if(!f) return;
+  if(f.type && f.type !== 'application/pdf' && !/\.pdf$/i.test(f.name)) return toast('That is not a PDF.');
+  setStatus('Reading…');
+  S.bytes = new Uint8Array(await f.arrayBuffer()); S.name = f.name;
+  S.cache.clear(); S.marks=[]; S.undo=[]; S.found.clear(); S.cur=1; S.fit=true;
+  let task = pdfjsLib.getDocument({data:S.bytes.slice(0), useSystemFonts:true});
+  try{ S.doc = await task.promise; }
+  catch(err){
+    if(err && err.name === 'PasswordException'){
+      const pw = prompt('This PDF is password protected. Enter the password:');
+      if(pw === null) return setStatus('Cancelled');
+      try{ S.doc = await pdfjsLib.getDocument({data:S.bytes.slice(0), password:pw, useSystemFonts:true}).promise; }
+      catch(e2){ return setStatus('Wrong password.'); }
+    } else { console.error(err); return setStatus('Could not parse this PDF.'); }
+  }
+  S.pages = S.doc.numPages;
+  el('pTot').textContent = S.pages;
+  el('empty').style.display='none'; el('wrap').style.display='block'; el('btnGo').disabled=false;
+  el('docInfo').innerHTML = '<b>'+esc(f.name)+'</b><br>'+S.pages+' page'+(S.pages>1?'s':'')+' · '+(f.size/1048576).toFixed(2)+' MB'
+    + (!S.pro && S.pages>5 ? '<br><span style="color:var(--warn)">Free tier exports up to 5 pages.</span>' : '');
+  await render(); await scan();
+}
+
+/* ---------- scan ----------------------------------------------------------- */
+async function scan(){
+  setStatus('Scanning…'); S.found.clear();
+  const cap = Math.min(S.pages, 400);
+  for(let p=1;p<=cap;p++){
+    const pd = await pageData(p);
+    if(!pd.full.trim()) continue;
+    for(const D of DETECTORS){
+      const re = new RegExp(D.re.source, D.re.flags.includes('g')?D.re.flags:D.re.flags+'g');
+      let m;
+      while((m = re.exec(pd.full)) !== null){
+        if(m[0].length === 0){ re.lastIndex++; continue; }
+        if(D.ok && !D.ok(m[0].trim())) continue;
+        const rects = rangeRects(pd, m.index, m.index + m[0].length);
+        if(!rects.length) continue;
+        if(!S.found.has(D.id)) S.found.set(D.id, []);
+        S.found.get(D.id).push({page:p, text:m[0].trim(), rects});
+      }
+    }
+    if(p%25===0) await new Promise(r=>setTimeout(r));
+  }
+  let total = 0; S.found.forEach(v => total += v.length);
+  el('scanN').textContent = total ? total+' hits' : '';
+  drawScan();
+  // auto-apply the high-confidence categories
+  DETECTORS.filter(d=>d.on).forEach(d => { if(S.found.has(d.id)) applyDetector(d.id, true); });
+  setStatus(total ? total+' potential identifiers found' : 'No text layer found — use manual boxes');
+  drawMarks(); paintOverlay();
+}
+function drawScan(){
+  const box = el('scanBox');
+  if(!S.found.size){ box.innerHTML = '<div class="hint">No pattern matches. If this is a scan, the page has no text layer — draw boxes manually; rasterising still removes the pixels.</div>'; return; }
+  box.innerHTML = DETECTORS.filter(d=>S.found.has(d.id)).map(d=>{
+    const hits = S.found.get(d.id);
+    const samp = hits.slice(0,2).map(h=>h.text).join(' · ');
+    return '<label class="chk"><input type="checkbox" data-det="'+d.id+'"'+(d.on?' checked':'')+'>'
+      + '<span class="lab">'+esc(d.label)+' <span class="cnt">×'+hits.length+'</span>'
+      + '<div class="samp">'+esc(samp)+(hits.length>2?' …':'')+'</div></span></label>';
+  }).join('');
+  box.querySelectorAll('input[data-det]').forEach(i =>
+    i.onchange = () => { push(); applyDetector(i.dataset.det, i.checked); drawMarks(); paintOverlay(); });
+}
+function applyDetector(id, on){
+  S.marks = S.marks.filter(m => m.src !== 'auto:'+id);
+  if(on && S.found.has(id)){
+    S.found.get(id).forEach((h,hi) => h.rects.forEach((r,ri) =>
+      S.marks.push({id:'a'+(S.seq++), page:h.page, ...r, src:'auto:'+id, text:h.text})));
+  }
+}
+
+/* ---------- custom terms ---------------------------------------------------- */
+el('btnTerms').onclick = async () => {
+  const list = el('terms').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!S.doc) return toast('Load a document first.');
+  if(!list.length) return toast('Enter at least one term.');
+  push();
+  S.marks = S.marks.filter(m => m.src !== 'terms');
+  const flags = el('tCase').checked ? 'g' : 'gi';
+  let n = 0;
+  for(let p=1;p<=S.pages;p++){
+    const pd = await pageData(p); if(!pd.full) continue;
+    for(const term of list){
+      const re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), flags);
+      let m; while((m = re.exec(pd.full)) !== null){
+        if(!m[0].length){ re.lastIndex++; continue; }
+        rangeRects(pd, m.index, m.index+m[0].length).forEach(r =>
+          { S.marks.push({id:'t'+(S.seq++), page:p, ...r, src:'terms', text:m[0]}); n++; });
+      }
+    }
+  }
+  drawMarks(); paintOverlay(); toast(n+' occurrence'+(n===1?'':'s')+' marked');
+};
+
+/* ---------- render ---------------------------------------------------------- */
+let renderTask = null;
+async function render(){
+  if(!S.doc) return;
+  const pd = await pageData(S.cur);
+  const stage = el('stage');
+  if(S.fit) S.zoom = clamp((stage.clientWidth - 60) / pd.vp.width, .2, 4);
+  el('zVal').textContent = Math.round(S.zoom*100)+'%';
+  el('pNum').value = S.cur;
+  const dpr = Math.min(window.devicePixelRatio||1, 2);
+  const vp = pd.page.getViewport({scale:S.zoom*dpr});
+  const cv = el('cv'), ctx = cv.getContext('2d', {alpha:false});
+  cv.width = Math.floor(vp.width); cv.height = Math.floor(vp.height);
+  cv.style.width = Math.floor(pd.vp.width*S.zoom)+'px';
+  cv.style.height = Math.floor(pd.vp.height*S.zoom)+'px';
+  el('wrap').style.width = cv.style.width; el('wrap').style.height = cv.style.height;
+  if(renderTask){ try{ renderTask.cancel(); }catch(e){} }
+  renderTask = pd.page.render({canvasContext:ctx, viewport:vp});
+  try{ await renderTask.promise; }catch(e){ if(e && e.name!=='RenderingCancelledException') console.warn(e); }
+  paintOverlay();
+}
+function paintOverlay(){
+  const ovl = el('ovl');
+  [...ovl.querySelectorAll('.rbox')].forEach(n=>n.remove());
+  S.marks.filter(m=>m.page===S.cur).forEach(m=>{
+    const d = document.createElement('div');
+    d.className='rbox';
+    d.style.cssText = `left:${m.x*S.zoom}px;top:${m.y*S.zoom}px;width:${m.w*S.zoom}px;height:${m.h*S.zoom}px`;
+    d.title = m.text ? m.text+'  ('+m.src+')' : m.src;
+    d.innerHTML = '<div class="x">×</div>';
+    d.onclick = ev => { ev.stopPropagation(); push(); S.marks = S.marks.filter(x=>x.id!==m.id); drawMarks(); paintOverlay(); };
+    ovl.appendChild(d);
+  });
+}
+function drawMarks(){ el('markN').textContent = S.marks.length; }
+function push(){ S.undo.push(JSON.stringify(S.marks)); if(S.undo.length>60) S.undo.shift(); }
+
+/* ---------- manual marking --------------------------------------------------- */
+(function(){
+  const ovl = el('ovl'), dg = el('drag');
+  let sx=0, sy=0, on=false;
+  ovl.addEventListener('pointerdown', e => {
+    if(!S.doc || e.target.closest('.rbox')) return;
+    if(S.mode === 'word'){ wordAt(e); return; }
+    on = true; ovl.setPointerCapture(e.pointerId);
+    const r = ovl.getBoundingClientRect(); sx = e.clientX-r.left; sy = e.clientY-r.top;
+    dg.style.display='block'; dg.style.cssText += `;left:${sx}px;top:${sy}px;width:0;height:0`;
+  });
+  ovl.addEventListener('pointermove', e => {
+    if(!on) return; const r = ovl.getBoundingClientRect();
+    const x = e.clientX-r.left, y = e.clientY-r.top;
+    dg.style.left = Math.min(sx,x)+'px'; dg.style.top = Math.min(sy,y)+'px';
+    dg.style.width = Math.abs(x-sx)+'px'; dg.style.height = Math.abs(y-sy)+'px';
+  });
+  ovl.addEventListener('pointerup', e => {
+    if(!on) return; on=false; dg.style.display='none';
+    const r = ovl.getBoundingClientRect();
+    const x=Math.min(sx,e.clientX-r.left), y=Math.min(sy,e.clientY-r.top);
+    const w=Math.abs(e.clientX-r.left-sx), h=Math.abs(e.clientY-r.top-sy);
+    if(w<5||h<5) return;
+    push();
+    const box = {x:x/S.zoom, y:y/S.zoom, w:w/S.zoom, h:h/S.zoom};
+    const pages = el('allPages').checked ? Array.from({length:S.pages},(_,i)=>i+1) : [S.cur];
+    pages.forEach(p => S.marks.push({id:'m'+(S.seq++), page:p, ...box, src:'manual', text:''}));
+    drawMarks(); paintOverlay();
+  });
+  async function wordAt(e){
+    const r = el('ovl').getBoundingClientRect();
+    const x=(e.clientX-r.left)/S.zoom, y=(e.clientY-r.top)/S.zoom;
+    const pd = await pageData(S.cur);
+    for(let i=0;i<pd.items.length;i++){
+      const it = pd.items[i]; if(!it.str.trim()) continue;
+      const bb = subRect(pd,i,0,it.str.length);
+      if(x>=bb.x && x<=bb.x+bb.w && y>=bb.y && y<=bb.y+bb.h){
+        push(); S.marks.push({id:'w'+(S.seq++), page:S.cur, ...bb, src:'manual', text:it.str});
+        drawMarks(); paintOverlay(); return;
+      }
+    }
+    toast('No text item under the cursor.');
+  }
+})();
+
+/* ---------- 5. compositor + 6. verifier --------------------------------------- */
+el('btnGo').onclick = async () => {
+  if(S.busy) return;
+  if(!S.pro && S.pages > 5){ el('mLic').classList.add('show'); el('licMsg').textContent='This document has '+S.pages+' pages. The free tier exports up to 5.'; return; }
+  if(!S.marks.length && !confirm('No redaction marks are set. Continue anyway? (The document will still be flattened and its metadata stripped.)')) return;
+  S.busy = true; el('btnGo').disabled = true;
+  const bar = el('bar'); bar.style.display='block';
+  const prog = p => { bar.firstElementChild.style.width = Math.round(p*100)+'%'; };
+  try{
+    const {PDFDocument, StandardFonts} = PDFLib;
+    const out = await PDFDocument.create();
+    const font = el('txtLayer').checked ? await out.embedFont(StandardFonts.Helvetica) : null;
+    const dpiScale = (+el('dpi').value)/72, useJpeg = el('enc').value === 'jpeg';
+    const cv = document.createElement('canvas'), ctx = cv.getContext('2d', {alpha:false});
+    const redactedText = new Set(), skipped = {rotated:0, nonAscii:0};
+
+    for(let p=1;p<=S.pages;p++){
+      setStatus('Flattening page '+p+' / '+S.pages); prog((p-1)/S.pages);
+      await new Promise(r=>setTimeout(r));
+      const pd = await pageData(p);
+      const vp = pd.page.getViewport({scale:dpiScale});
+      cv.width = Math.floor(vp.width); cv.height = Math.floor(vp.height);
+      ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+      await pd.page.render({canvasContext:ctx, viewport:vp}).promise;
+
+      const marks = S.marks.filter(m=>m.page===p);
+      ctx.fillStyle = '#000';
+      marks.forEach(m => { if(m.text) redactedText.add(m.text);
+        ctx.fillRect(Math.floor(m.x*dpiScale), Math.floor(m.y*dpiScale),
+                     Math.ceil(m.w*dpiScale),  Math.ceil(m.h*dpiScale)); });
+
+      const url = useJpeg ? cv.toDataURL('image/jpeg', 0.92) : cv.toDataURL('image/png');
+      const img = useJpeg ? await out.embedJpg(url) : await out.embedPng(url);
+      const W = pd.vp.width, H = pd.vp.height;
+      const page = out.addPage([W,H]);
+      page.drawImage(img, {x:0, y:0, width:W, height:H});
+
+      if(font){
+        const hit = (r) => marks.some(m => !(r.x2 < m.x || r.x > m.x+m.w || r.y2 < m.y || r.y > m.y+m.h));
+        let drawn = 0;
+        for(let i=0;i<pd.items.length && drawn<4000;i++){
+          const it = pd.items[i]; const raw = it.str; if(!raw.trim()) continue;
+          const bb = subRect(pd,i,0,raw.length);
+          if(hit({x:bb.x, y:bb.y, x2:bb.x+bb.w, y2:bb.y+bb.h})) continue;
+          const t = it.transform;
+          const sy = Math.hypot(t[2],t[3]) || it.height || 10;
+          const o  = pdfjsLib.Util.applyTransform([t[4],t[5]], pd.vp.transform);
+          const o2 = pdfjsLib.Util.applyTransform([t[4]+t[0]*0.01, t[5]+t[1]*0.01], pd.vp.transform);
+          if(Math.abs(o2[1]-o[1]) > 1e-3){ skipped.rotated++; continue; }   // rotated run
+          const clean = raw.replace(/[\r\n\t]/g,' ').replace(/[^\x20-\x7E]/g,'');
+          if(!clean.trim()){ skipped.nonAscii++; continue; }
+          try{ page.drawText(clean, {x:o[0], y:H-o[1], size:Math.max(sy,1), font, opacity:0}); drawn++; }catch(e){ skipped.nonAscii++; }
+        }
+      }
+    }
+
+    if(el('stripMeta').checked){
+      out.setTitle(''); out.setAuthor(''); out.setSubject(''); out.setKeywords([]);
+      out.setProducer('IronRedact'); out.setCreator('IronRedact');
+      const now = new Date(); out.setCreationDate(now); out.setModificationDate(now);
+    }
+    setStatus('Writing PDF…'); prog(.95);
+    const bytes = await out.save({useObjectStreams:true});
+
+    /* ---- verification pass ---- */
+    setStatus('Verifying output…');
+    const vdoc = await pdfjsLib.getDocument({data:bytes.slice(0), useSystemFonts:true}).promise;
+    let extracted = '';
+    for(let p=1;p<=vdoc.numPages;p++){
+      const tc = await (await vdoc.getPage(p)).getTextContent();
+      extracted += tc.items.map(i=>i.str).join(' ') + '\n';
+    }
+    const leaks = [...redactedText].filter(t => t.length>2 && extracted.includes(t));
+    const residual = [];
+    for(const D of DETECTORS){
+      const re = new RegExp(D.re.source,'g'); let m, c=0;
+      while((m=re.exec(extracted))!==null){ if(!m[0].length){re.lastIndex++;continue;} if(D.ok && !D.ok(m[0].trim())) continue; c++; }
+      if(c) residual.push(D.label+' ×'+c);
+    }
+    let hash = 'unavailable (insecure context)';
+    try{ const h = await crypto.subtle.digest('SHA-256', bytes.slice(0).buffer);
+         hash = [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join(''); }catch(e){}
+    prog(1);
+    showReport({bytes, extracted, leaks, residual, hash, skipped,
+                marks:S.marks.length, pages:vdoc.numPages, kb:(bytes.length/1024).toFixed(0)});
+    setStatus(leaks.length ? 'VERIFICATION FAILED — see report' : 'Redaction verified');
+  }catch(err){
+    console.error(err); setStatus('Export failed: '+err.message); alert('Export failed: '+err.message);
+  }finally{
+    S.busy=false; el('btnGo').disabled=false; setTimeout(()=>{ el('bar').style.display='none'; prog(0); },800);
+  }
+};
+
+function showReport(r){
+  const safe = r.leaks.length === 0;
+  const fname = S.name.replace(/\.pdf$/i,'') + '.redacted.pdf';
+  el('reportCard').innerHTML =
+    '<h2>Verification report</h2>'
+  + '<div class="hint">IronRedact re-opened the file it just produced and extracted every character of text it could find.</div>'
+  + '<div class="verdict '+(safe?'ok':'bad')+'">'
+    + (safe ? '&#10003; PASS — none of the redacted strings are recoverable from the output.'
+            : '&#10007; FAIL — ' + r.leaks.length + ' redacted string(s) are still extractable. Turn off "keep output searchable" and re-export.') + '</div>'
+  + (r.leaks.length ? '<div class="hint" style="color:var(--bad);font-family:var(--mono);margin-top:6px">'+esc(r.leaks.slice(0,8).join(' · '))+'</div>' : '')
+  + '<div class="kv">'
+    + '<div class="k">Source file</div><div class="v">'+esc(S.name)+'</div>'
+    + '<div class="k">Pages written</div><div class="v">'+r.pages+'</div>'
+    + '<div class="k">Redaction marks applied</div><div class="v">'+r.marks+'</div>'
+    + '<div class="k">Extractable characters</div><div class="v">'+r.extracted.replace(/\s/g,'').length+'</div>'
+    + '<div class="k">Residual pattern matches</div><div class="v">'+(r.residual.length?esc(r.residual.join(', ')):'none')+'</div>'
+    + '<div class="k">Original content stream</div><div class="v">discarded (pages rasterised at '+el('dpi').value+' DPI)</div>'
+    + '<div class="k">Metadata / annotations / JS</div><div class="v">'+(el('stripMeta').checked?'removed':'kept')+'</div>'
+    + '<div class="k">Output size</div><div class="v">'+r.kb+' KB</div>'
+    + '<div class="k">SHA-256</div><div class="v">'+esc(r.hash)+'</div>'
+    + '<div class="k">Network requests</div><div class="v">0 outbound during this session</div>'
+  + '</div>'
+  + '<div class="row"><button class="btn pri" id="dl">Download '+esc(fname)+'</button>'
+  + '<button class="btn" id="dlrep">Download report (.txt)</button>'
+  + '<div class="spacer"></div><button class="btn" id="closeRep">Close</button></div>';
+  el('mReport').classList.add('show');
+  el('dl').onclick = () => save(new Blob([r.bytes],{type:'application/pdf'}), fname);
+  el('dlrep').onclick = () => {
+    const txt = ['IronRedact verification report', new Date().toISOString(), '',
+      'Source: '+S.name, 'Pages: '+r.pages, 'Marks applied: '+r.marks,
+      'Verdict: '+(safe?'PASS':'FAIL'), 'Extractable characters in output: '+r.extracted.replace(/\s/g,'').length,
+      'Residual pattern matches: '+(r.residual.join(', ')||'none'),
+      'Output SHA-256: '+r.hash, 'Outbound network requests: 0',
+      '', 'Method: every page was rasterised at '+el('dpi').value+' DPI, redaction rectangles were composited',
+      'onto the raster, and a new PDF was assembled from the rasters. The original page content',
+      'streams, fonts, annotations, attachments and metadata are not present in the output file.'
+    ].join('\n');
+    save(new Blob([txt],{type:'text/plain'}), fname.replace(/\.pdf$/,'')+'.verification.txt');
+  };
+  el('closeRep').onclick = () => el('mReport').classList.remove('show');
+}
+function save(blob, name){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
+
+/* ---------- offline bundler ---------------------------------------------------- */
+el('btnBundle').onclick = async () => {
+  setStatus('Packaging offline copy…');
+  try{
+    const grab = async (url,id) => {
+      const emb = document.getElementById(id);
+      if(emb && emb.textContent.trim()) return emb.textContent.replace(/\s+/g,'');
+      NET.open = true; const r = await fetch(url); NET.open = false;
+      return b64FromBytes(new Uint8Array(await r.arrayBuffer()));
+    };
+    const [a,b,c] = await Promise.all([grab(CDN.pdfjs,'emb-pdfjs'), grab(CDN.pdflib,'emb-pdflib'), grab(CDN.worker,'emb-worker')]);
+    let html = SELF_HTML
+      .replace(/<script[^>]*id="emb-[^"]*"[^>]*>[\s\S]*?<\/script>/g,'')
+      .replace(/<script src="https:\/\/cdnjs[^"]*"><\/script>/g,'')
+      .replace('</head>',
+        '<script type="text/plain" id="emb-pdfjs">'+a+'<\/script>'+
+        '<script type="text/plain" id="emb-pdflib">'+b+'<\/script>'+
+        '<script type="text/plain" id="emb-worker">'+c+'<\/script></head>');
+    save(new Blob([html],{type:'text/html'}), 'IronRedact-offline.html');
+    setStatus('Offline copy saved — it runs with the network cable unplugged.');
+  }catch(e){ console.error(e); NET.open=false; setStatus('Could not package: '+e.message); }
+};
+
+/* ---------- licence ------------------------------------------------------------ */
+/* Key = IRC-XXXX-XXXX-XXXX over base36 chars; last char is a weighted checksum.
+   Mint keys with:  const v=c=>parseInt(c,36);
+   let body='...11 chars...'; let s=17; [...body].forEach((c,i)=>s+=v(c)*(i+1));
+   const key='IRC-'+(body+(s%36).toString(36).toUpperCase()).match(/.{4}/g).join('-');
+   Change the salt (17) before you sell. Demo key: IRC-AAAA-AAAA-AAAT            */
+function checkKey(k){
+  k = (k||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(!/^IRC[A-Z0-9]{12}$/.test(k)) return false;
+  const body = k.slice(3);
+  let s = 17;
+  for(let i=0;i<11;i++){ const v = parseInt(body[i],36); if(isNaN(v)) return false; s += v*(i+1); }
+  return body[11] === (s%36).toString(36).toUpperCase();
+}
+el('btnLic').onclick = () => { el('mLic').classList.add('show'); el('licKey').value = localStorage.getItem('ironredact.key')||''; };
+el('licClose').onclick = () => el('mLic').classList.remove('show');
+el('licSave').onclick = () => {
+  const k = el('licKey').value;
+  if(checkKey(k)){ localStorage.setItem('ironredact.key', k.toUpperCase()); S.pro = true;
+    el('licMsg').innerHTML = '<span style="color:var(--ok)">Activated. Page limit removed.</span>'; setStatus('Ready · licensed'); }
+  else el('licMsg').innerHTML = '<span style="color:var(--bad)">That key is not valid.</span>';
+};
+
+/* ---------- wiring --------------------------------------------------------------- */
+el('drop').onclick = () => el('file').click();
+el('file').onchange = e => openFile(e.target.files[0]);
+['dragenter','dragover'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); el('drop').classList.add('over'); }));
+['dragleave','drop'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); el('drop').classList.remove('over'); }));
+document.addEventListener('drop', e => { if(e.dataTransfer.files[0]) openFile(e.dataTransfer.files[0]); });
+el('pPrev').onclick = () => { if(S.cur>1){ S.cur--; render(); } };
+el('pNext').onclick = () => { if(S.cur<S.pages){ S.cur++; render(); } };
+el('pNum').onchange = e => { const v = clamp(parseInt(e.target.value)||1,1,S.pages); S.cur=v; render(); };
+el('zIn').onclick  = () => { S.fit=false; S.zoom=clamp(S.zoom*1.25,.2,5); render(); };
+el('zOut').onclick = () => { S.fit=false; S.zoom=clamp(S.zoom/1.25,.2,5); render(); };
+el('zFit').onclick = () => { S.fit=true; render(); };
+el('mBox').onclick  = () => { S.mode='box';  el('mBox').classList.add('on');  el('mWord').classList.remove('on'); };
+el('mWord').onclick = () => { S.mode='word'; el('mWord').classList.add('on'); el('mBox').classList.remove('on'); };
+el('btnUndo').onclick = () => { const s = S.undo.pop(); if(s){ S.marks = JSON.parse(s); drawMarks(); paintOverlay(); } };
+el('btnClear').onclick = () => { push(); S.marks = S.marks.filter(m=>m.page!==S.cur); drawMarks(); paintOverlay(); };
+el('btnPage').onclick = async () => { if(!S.doc) return; const pd = await pageData(S.cur); push();
+  S.marks.push({id:'p'+(S.seq++), page:S.cur, x:0, y:0, w:pd.vp.width, h:pd.vp.height, src:'manual', text:''});
+  drawMarks(); paintOverlay(); };
+document.addEventListener('keydown', e => {
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z'){ e.preventDefault(); el('btnUndo').click(); }
+  if(e.key==='PageDown'||e.key==='ArrowRight') el('pNext').click();
+  if(e.key==='PageUp'||e.key==='ArrowLeft') el('pPrev').click();
+});
+let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(()=>{ if(S.fit) render(); }, 150); });
+[...document.querySelectorAll('.modal')].forEach(m => m.onclick = e => { if(e.target===m) m.classList.remove('show'); });
+
+boot();
+</script>
+</body>
+</html>

@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ProfitPreflight — Catch Estimate Mistakes Before They Cost You</title>
+<style>
+  :root{
+    --bg:#f6f8fb; --panel:#ffffff; --ink:#111827; --muted:#667085;
+    --line:#e7eaf0; --nav:#0b1220; --nav2:#101827; --brand:#6d5dfc;
+    --brand2:#8c7bff; --good:#16a34a; --warn:#f59e0b; --bad:#dc2626;
+    --soft:#f1f3f8; --shadow:0 12px 30px rgba(15,23,42,.08);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  button,input,select,textarea{font:inherit}
+  button{cursor:pointer}
+  .app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
+  .sidebar{background:linear-gradient(180deg,var(--nav),var(--nav2));color:#fff;padding:22px 16px;position:sticky;top:0;height:100vh}
+  .brand{display:flex;gap:10px;align-items:center;padding:4px 6px 22px}
+  .brand-mark{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,var(--brand2),var(--brand));display:grid;place-items:center;font-weight:900;box-shadow:0 8px 20px rgba(109,93,252,.35)}
+  .brand strong{font-size:17px}.brand small{display:block;color:#9ea7b7;font-size:11px;margin-top:2px}
+  .nav{display:flex;flex-direction:column;gap:5px}
+  .nav button{border:0;background:transparent;color:#aeb7c6;text-align:left;padding:11px 12px;border-radius:10px;display:flex;align-items:center;gap:10px}
+  .nav button:hover,.nav button.active{background:#1d2838;color:#fff}
+  .nav .ico{width:20px;text-align:center}
+  .side-card{position:absolute;left:16px;right:16px;bottom:18px;background:#151f2e;border:1px solid #2a3647;border-radius:14px;padding:14px}
+  .side-card .mini{font-size:11px;color:#9ea7b7;text-transform:uppercase;letter-spacing:.08em}
+  .side-card strong{display:block;margin:6px 0 3px}
+  .side-card p{font-size:12px;line-height:1.5;color:#b8c0cd;margin:0 0 10px}
+  .side-card button{width:100%;border:0;border-radius:9px;background:#fff;color:#121826;font-weight:700;padding:9px}
+  main{min-width:0}
+  .topbar{height:68px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:5}
+  .crumb{font-size:14px;color:var(--muted)} .crumb b{color:var(--ink)}
+  .top-actions{display:flex;align-items:center;gap:10px}
+  .badge{padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:12px;font-weight:700}
+  .avatar{width:34px;height:34px;background:#e8e5ff;color:#4d3be7;border-radius:50%;display:grid;place-items:center;font-weight:800}
+  .content{padding:28px;max-width:1420px;margin:0 auto}
+  .page{display:none}.page.active{display:block}
+  .hero{background:linear-gradient(120deg,#171d2d,#24213f 60%,#4e3fba);border-radius:22px;padding:34px;color:#fff;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .hero:after{content:"";position:absolute;width:360px;height:360px;border:1px solid rgba(255,255,255,.12);border-radius:50%;right:-110px;top:-180px;box-shadow:0 0 0 55px rgba(255,255,255,.03),0 0 0 110px rgba(255,255,255,.02)}
+  .hero .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.11em;color:#c5c4ff;font-weight:800}
+  .hero h1{font-size:38px;line-height:1.08;max-width:760px;margin:10px 0 12px}
+  .hero p{max-width:720px;color:#d6d9e6;font-size:16px;line-height:1.6;margin:0}
+  .hero-actions{display:flex;gap:10px;margin-top:24px}
+  .btn{border:1px solid var(--line);background:#fff;color:var(--ink);padding:11px 15px;border-radius:10px;font-weight:800}
+  .btn.primary{background:var(--brand);color:white;border-color:var(--brand);box-shadow:0 7px 18px rgba(109,93,252,.25)}
+  .btn.dark{background:#111827;color:#fff;border-color:#111827}
+  .btn.ghost{background:transparent;color:inherit;border-color:rgba(255,255,255,.28)}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px}
+  .stat .label{color:var(--muted);font-size:12px;font-weight:700}
+  .stat .num{font-size:28px;font-weight:900;margin:6px 0 3px}
+  .stat .delta{font-size:12px;color:var(--muted)}
+  .grid{display:grid;grid-template-columns:1.3fr .7fr;gap:18px;margin-top:18px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 4px 14px rgba(15,23,42,.03)}
+  .card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  .card h3{margin:0;font-size:16px}.sub{font-size:12px;color:var(--muted)}
+  .audit-list{display:flex;flex-direction:column;gap:8px}
+  .audit-row{display:grid;grid-template-columns:1fr 130px 95px 90px;align-items:center;gap:10px;border:1px solid var(--line);padding:12px;border-radius:12px}
+  .audit-row strong{display:block;font-size:13px}.audit-row small{color:var(--muted)}
+  .risk{font-weight:900}.risk.low{color:var(--good)}.risk.med{color:var(--warn)}.risk.high{color:var(--bad)}
+  .pill{padding:5px 8px;border-radius:999px;font-size:11px;font-weight:800;display:inline-block;background:#f3f4f6}
+  .score-ring{width:150px;height:150px;border-radius:50%;display:grid;place-items:center;margin:18px auto;background:conic-gradient(var(--brand) 0 72%,#eceef3 72% 100%);position:relative}
+  .score-ring:after{content:"";position:absolute;inset:13px;background:#fff;border-radius:50%}
+  .score-ring span{position:relative;z-index:1;text-align:center}.score-ring b{font-size:34px;display:block}.score-ring small{color:var(--muted)}
+  .check-mini{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--good)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}
+  .form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  label{display:block;font-size:12px;color:#475467;font-weight:800;margin-bottom:6px}
+  input,select,textarea{width:100%;border:1px solid #d8dde6;border-radius:10px;background:#fff;padding:11px 12px;color:#172033;outline:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(109,93,252,.1)}
+  textarea{min-height:210px;resize:vertical;line-height:1.55}
+  .full{grid-column:1/-1}
+  .hint{font-size:11px;color:var(--muted);margin-top:5px}
+  .section-title{display:flex;justify-content:space-between;align-items:end;margin-bottom:18px}
+  .section-title h2{font-size:28px;margin:0 0 5px}.section-title p{margin:0;color:var(--muted);font-size:14px}
+  .runbar{display:flex;justify-content:flex-end;gap:10px;margin-top:14px}
+  .result-wrap{display:none;margin-top:18px}.result-wrap.show{display:block}
+  .result-top{display:grid;grid-template-columns:220px 1fr;gap:18px}
+  .grade{border:1px solid var(--line);border-radius:16px;padding:18px;text-align:center}
+  .grade .big{font-size:48px;font-weight:950;line-height:1}.grade .caption{color:var(--muted);font-size:12px;margin-top:5px}
+  .metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .metric{border:1px solid var(--line);border-radius:12px;padding:14px}.metric span{display:block;font-size:11px;color:var(--muted);font-weight:800}.metric b{font-size:21px;display:block;margin-top:5px}
+  .flag-list{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+  .flag{border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:start}
+  .flag-icon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#fff7ed}
+  .flag.high .flag-icon{background:#fef2f2}.flag.low .flag-icon{background:#f0fdf4}
+  .flag h4{margin:0 0 4px;font-size:14px}.flag p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
+  .flag button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:800}
+  .exposure{background:#111827;color:#fff;border-radius:16px;padding:20px;margin-top:14px;display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center}
+  .exposure small{color:#aeb7c6}.exposure strong{display:block;font-size:29px;margin-top:4px}.exposure .note{font-size:12px;color:#c8cfdb;max-width:700px;line-height:1.5}
+  .empty{text-align:center;padding:40px 15px;color:var(--muted)}
+  table{width:100%;border-collapse:collapse} th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line);font-size:13px} th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .rule-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .rule-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px}.rule-card h4{margin:0 0 6px}.rule-card p{font-size:12px;color:var(--muted);line-height:1.5}
+  .rule-tags{display:flex;flex-wrap:wrap;gap:6px}.rule-tags span{font-size:10px;padding:5px 7px;border-radius:999px;background:#f1f3f7;color:#4b5563}
+  .pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:980px}
+  .price-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px;position:relative}.price-card.featured{border:2px solid var(--brand);box-shadow:var(--shadow)}
+  .price-card h3{margin:0}.price{font-size:36px;font-weight:950;margin:12px 0}.price small{font-size:13px;color:var(--muted);font-weight:600}
+  .price-card ul{padding-left:18px;color:#475467;font-size:13px;line-height:1.9}
+  .ribbon{position:absolute;top:-11px;right:16px;background:var(--brand);color:#fff;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:900}
+  .modal{display:none;position:fixed;inset:0;background:rgba(3,7,18,.6);z-index:20;place-items:center;padding:20px}.modal.show{display:grid}
+  .modal-box{width:min(560px,100%);background:#fff;border-radius:18px;padding:22px;box-shadow:0 25px 80px rgba(0,0,0,.25)}
+  .modal-box h3{margin-top:0}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+  .toast{position:fixed;right:22px;bottom:22px;background:#111827;color:#fff;padding:12px 15px;border-radius:10px;font-size:12px;opacity:0;transform:translateY(8px);transition:.25s;z-index:30}.toast.show{opacity:1;transform:none}
+  .mobile-menu{display:none;border:0;background:#fff;font-size:22px}
+  @media(max-width:980px){
+    .app{grid-template-columns:1fr}.sidebar{display:none;position:fixed;z-index:50;width:250px}.sidebar.show{display:block}
+    .mobile-menu{display:block}.stats{grid-template-columns:repeat(2,1fr)}.grid,.result-top{grid-template-columns:1fr}.rule-grid,.pricing{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.full{grid-column:auto}
+  }
+  @media(max-width:640px){
+    .content{padding:18px}.topbar{padding:0 18px}.hero{padding:24px}.hero h1{font-size:30px}.stats{grid-template-columns:1fr}.audit-row{grid-template-columns:1fr 80px}.audit-row .hide-sm{display:none}.metric-grid{grid-template-columns:1fr}.flag{grid-template-columns:34px 1fr}.flag button{grid-column:2}.exposure{grid-template-columns:1fr}.hero-actions{flex-wrap:wrap}
+  }
+  @media print{
+    .sidebar,.topbar,.no-print,#dashboard,#history,#rules,#pricing{display:none!important}
+    .app{display:block}.content{padding:0}.page{display:none!important}#audit{display:block!important}
+    #auditFormCard{display:none}.result-wrap{display:block!important}.card{border:0;box-shadow:none}.exposure{color:#000;background:#fff;border:1px solid #ddd}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">P</div>
+      <div><strong>ProfitPreflight</strong><small>Estimate QA for contractors</small></div>
+    </div>
+    <nav class="nav">
+      <button class="active" data-page="dashboard"><span class="ico">⌂</span> Dashboard</button>
+      <button data-page="audit"><span class="ico">✓</span> New Preflight</button>
+      <button data-page="history"><span class="ico">↻</span> Audit History</button>
+      <button data-page="rules"><span class="ico">⚙</span> Trade Rules</button>
+      <button data-page="pricing"><span class="ico">$</span> Pricing</button>
+    </nav>
+    <div class="side-card">
+      <div class="mini">Demo mode</div>
+      <strong>No customer data leaves this file.</strong>
+      <p>This prototype runs entirely in your browser and stores audits locally.</p>
+      <button id="loadDemoSide">Load sample estimate</button>
+    </div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="mobile-menu" id="menuBtn">☰</button>
+        <div class="crumb">Workspace / <b id="crumb">Dashboard</b></div>
+      </div>
+      <div class="top-actions">
+        <span class="badge">Prototype · Offline</span>
+        <div class="avatar">PP</div>
+      </div>
+    </header>
+
+    <div class="content">
+      <section class="page active" id="dashboard">
+        <div class="hero">
+          <div class="eyebrow">The last 60 seconds before you send an estimate</div>
+          <h1>Catch the job that looks profitable — but isn’t.</h1>
+          <p>ProfitPreflight reviews your finished estimate for missing cost categories, thin margins, vague scope, absent exclusions, and trade-specific blind spots. It works beside the estimating tool you already use.</p>
+          <div class="hero-actions">
+            <button class="btn primary" id="startAudit">Run a preflight</button>
+            <button class="btn ghost" id="loadDemoHero">Try the $22K remodel demo</button>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><div class="label">Audits saved</div><div class="num" id="statAudits">0</div><div class="delta">stored on this device</div></div>
+          <div class="stat"><div class="label">Exposure flagged</div><div class="num" id="statExposure">$0</div><div class="delta">illustrative estimate risk</div></div>
+          <div class="stat"><div class="label">Avg. risk score</div><div class="num" id="statRisk">—</div><div class="delta">lower is better</div></div>
+          <div class="stat"><div class="label">Target margin</div><div class="num">30%</div><div class="delta">editable in audit</div></div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <div class="card-head"><div><h3>Recent preflights</h3><div class="sub">Your latest estimate reviews</div></div><button class="btn" id="newFromRecent">New audit</button></div>
+            <div class="audit-list" id="recentList"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><div><h3>What it checks</h3><div class="sub">Fast QA, not a replacement estimator</div></div></div>
+            <div class="score-ring"><span><b>12</b><small>risk categories</small></span></div>
+            <div class="check-mini"><span class="dot"></span> Profit & markup math</div>
+            <div class="check-mini"><span class="dot warn"></span> Trade-specific omissions</div>
+            <div class="check-mini"><span class="dot warn"></span> Permits, disposal & mobilization</div>
+            <div class="check-mini"><span class="dot bad"></span> Missing exclusions & contingency</div>
+            <div class="check-mini"><span class="dot"></span> Scope clarity & payment terms</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="audit">
+        <div class="section-title">
+          <div><h2>Estimate Preflight</h2><p>Paste the quote you are about to send. ProfitPreflight looks for what is missing.</p></div>
+          <button class="btn no-print" id="loadDemoAudit">Load demo</button>
+        </div>
+
+        <div class="card" id="auditFormCard">
+          <div class="form-grid">
+            <div><label>Project name</label><input id="project" placeholder="e.g. Oak Street Kitchen Remodel"></div>
+            <div><label>Trade / job type</label>
+              <select id="trade">
+                <option value="remodel">General Remodeling</option>
+                <option value="roofing">Roofing</option>
+                <option value="painting">Painting</option>
+                <option value="landscape">Landscaping</option>
+                <option value="pressure">Pressure Washing</option>
+                <option value="hvac">HVAC</option>
+                <option value="electrical">Electrical</option>
+                <option value="plumbing">Plumbing</option>
+              </select>
+            </div>
+            <div><label>Customer estimate total</label><input id="estimateTotal" type="number" min="0" step="0.01" placeholder="22000"></div>
+            <div><label>Your estimated direct cost</label><input id="directCost" type="number" min="0" step="0.01" placeholder="17000"><div class="hint">Materials + labor + subs you expect to pay.</div></div>
+            <div><label>Target gross margin</label><input id="targetMargin" type="number" min="1" max="80" value="30"></div>
+            <div><label>Estimated labor hours</label><input id="laborHours" type="number" min="0" step="1" placeholder="160"></div>
+            <div class="full"><label>Estimate / scope text</label><textarea id="estimateText" placeholder="Paste your estimate line items, scope notes, exclusions, payment terms, and anything else the customer will receive..."></textarea><div class="hint">Prototype note: this single-file demo uses transparent trade rules and text analysis. A production SaaS could add AI/PDF/photo parsing.</div></div>
+          </div>
+          <div class="runbar"><button class="btn" id="clearAudit">Clear</button><button class="btn primary" id="runAudit">Run Profit Preflight →</button></div>
+        </div>
+
+        <div class="result-wrap" id="results">
+          <div class="card">
+            <div class="card-head"><div><h3 id="resultProject">Preflight Report</h3><div class="sub" id="resultMeta">—</div></div><div class="no-print"><button class="btn" onclick="window.print()">Print report</button></div></div>
+            <div class="result-top">
+              <div class="grade">
+                <div class="big" id="riskScore">0</div>
+                <div class="caption">Risk score / 100</div>
+                <div style="margin-top:10px"><span class="pill" id="riskLabel">Low risk</span></div>
+              </div>
+              <div class="metric-grid">
+                <div class="metric"><span>Current gross margin</span><b id="currentMargin">—</b></div>
+                <div class="metric"><span>Target-safe price</span><b id="safePrice">—</b></div>
+                <div class="metric"><span>Potential pricing gap</span><b id="priceGap">—</b></div>
+                <div class="metric"><span>Flags found</span><b id="flagsCount">0</b></div>
+                <div class="metric"><span>Critical flags</span><b id="criticalCount">0</b></div>
+                <div class="metric"><span>Scope coverage</span><b id="coverage">—</b></div>
+              </div>
+            </div>
+            <div class="exposure">
+              <div><small>ESTIMATED EXPOSURE TO REVIEW BEFORE SENDING</small><strong id="exposureAmount">$0</strong><div class="note">This is a decision-support estimate based on your numbers and missing categories — not a promise of actual cost. Review every item before changing your quote.</div></div>
+              <button class="btn" id="saveAudit">Save audit</button>
+            </div>
+            <div class="flag-list" id="flagList"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="history">
+        <div class="section-title"><div><h2>Audit History</h2><p>Locally saved estimate checks from this browser.</p></div><button class="btn" id="eraseHistory">Erase history</button></div>
+        <div class="card"><div id="historyWrap"></div></div>
+      </section>
+
+      <section class="page" id="rules">
+        <div class="section-title"><div><h2>Trade Rules</h2><p>The MVP starts with transparent, editable checklists instead of pretending an AI guess is certainty.</p></div></div>
+        <div class="rule-grid" id="ruleGrid"></div>
+      </section>
+
+      <section class="page" id="pricing">
+        <div class="section-title"><div><h2>Business model</h2><p>Simple enough to buy without a demo call. Valuable enough to pay for itself on one caught mistake.</p></div></div>
+        <div class="pricing">
+          <div class="price-card"><h3>Free</h3><div class="price">$0<small>/mo</small></div><ul><li>3 preflights / month</li><li>Core margin math</li><li>Generic risk checklist</li><li>Local report export</li></ul><button class="btn" style="width:100%">Lead magnet</button></div>
+          <div class="price-card featured"><span class="ribbon">BEST WEDGE</span><h3>Pro</h3><div class="price">$29<small>/mo</small></div><ul><li>Unlimited preflights</li><li>Trade-specific checks</li><li>AI/PDF estimate review</li><li>Saved company rules</li><li>Estimate version comparison</li></ul><button class="btn primary" style="width:100%">35 customers = $1,015 MRR</button></div>
+          <div class="price-card"><h3>Team</h3><div class="price">$79<small>/mo</small></div><ul><li>Everything in Pro</li><li>5 estimator seats</li><li>Owner approval workflow</li><li>Custom rule library</li><li>Miss-pattern analytics</li></ul><button class="btn" style="width:100%">13 teams = $1,027 MRR</button></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="modal" id="demoModal">
+  <div class="modal-box">
+    <h3>Load sample $22K remodel?</h3>
+    <p style="color:var(--muted);line-height:1.55">This is fictional demo data inspired by the type of underbid discussed publicly by contractors. It does not use anyone’s real customer information.</p>
+    <div class="modal-actions"><button class="btn" id="cancelDemo">Cancel</button><button class="btn primary" id="confirmDemo">Load sample</button></div>
+  </div>
+</div>
+<div class="toast" id="toast">Saved</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const money = n => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(Number(n||0));
+
+const tradeRules = {
+  remodel: {
+    label:'General Remodeling',
+    checks:[
+      ['Permits / inspections',['permit','inspection'],8,'Who pulls and pays for permits/inspections?'],
+      ['Demolition & disposal',['demo','demolition','dumpster','disposal','haul'],8,'Define demolition, debris removal, dump fees, and hidden layers.'],
+      ['Site protection',['protect','dust','floor protection','containment'],6,'Add floor/wall protection, dust containment, and daily cleanup.'],
+      ['Material delivery / freight',['delivery','freight','shipping'],5,'Confirm delivery, carrying, and freight are priced.'],
+      ['Allowances / selections',['allowance','selection','fixture allowance','tile allowance'],7,'Define allowances before finish selections create a gap.'],
+      ['Electrical / plumbing coordination',['electrical','plumbing','electrician','plumber'],7,'Clarify trade coordination and who owns unforeseen code work.'],
+      ['Cleanup / final clean',['cleanup','clean up','final clean'],4,'State final cleanup and disposal responsibility.'],
+      ['Exclusions',['exclude','exclusion','not included'],10,'Write what is not included so silence is not mistaken for scope.'],
+      ['Change-order process',['change order','additional work','extra work'],8,'Define how extra work is priced and approved.'],
+      ['Contingency / unforeseen conditions',['contingency','unforeseen','concealed','hidden condition'],9,'Address concealed damage and unforeseen conditions before opening walls.'],
+      ['Warranty',['warranty','workmanship'],3,'State workmanship warranty or explicitly note none.'],
+      ['Payment schedule',['deposit','payment','milestone','draw'],5,'Tie payments to milestones or a clear schedule.']
+    ]
+  },
+  roofing: {
+    label:'Roofing',
+    checks:[
+      ['Tear-off / layers',['tear off','tear-off','layers','removal'],8,'State assumed roof layers and extra-layer pricing.'],
+      ['Decking replacement',['decking','sheathing','plywood'],9,'Define included decking and per-sheet replacement pricing.'],
+      ['Underlayment',['underlayment','ice and water','synthetic'],7,'Specify underlayment system.'],
+      ['Flashing',['flashing','drip edge','step flashing'],8,'List flashing and edge metal explicitly.'],
+      ['Ventilation',['vent','ridge vent','intake'],6,'Confirm ventilation scope.'],
+      ['Permits',['permit'],6,'Clarify permit cost and responsibility.'],
+      ['Dump / disposal',['dump','disposal','haul'],6,'Include dumpster/haul and dump fees.'],
+      ['Protection / cleanup',['magnet','cleanup','landscape protection'],5,'Define property protection and nail cleanup.'],
+      ['Warranty',['warranty'],4,'State manufacturer/workmanship warranty.'],
+      ['Exclusions',['exclude','not included'],8,'List exclusions and hidden-condition assumptions.']
+    ]
+  },
+  painting: {
+    label:'Painting',
+    checks:[
+      ['Prep / repairs',['prep','patch','sand','caulk'],9,'Define exactly how much prep/repair is included.'],
+      ['Coat count',['coat','coats'],8,'State primer and finish coat count.'],
+      ['Paint brand / line',['sherwin','benjamin','paint brand','product line'],6,'Specify paint manufacturer/grade or allowance.'],
+      ['Furniture / masking',['mask','cover','furniture','floor protection'],5,'Include protection and furniture movement responsibility.'],
+      ['Color changes',['color','accent'],5,'Define number of colors and extra color charges.'],
+      ['High access',['ladder','lift','scaffold','height'],6,'Include high-access equipment if needed.'],
+      ['Cleanup',['cleanup','clean up'],4,'Define daily/final cleanup.'],
+      ['Exclusions',['exclude','not included'],8,'List surfaces/repairs not included.']
+    ]
+  },
+  landscape: {
+    label:'Landscaping',
+    checks:[
+      ['Haul-off / disposal',['haul','disposal','dump'],7,'Price green waste, soil, rock, or demo haul-off.'],
+      ['Delivery',['delivery','freight'],6,'Include soil, mulch, rock, plant delivery.'],
+      ['Irrigation',['irrigation','sprinkler'],8,'Clarify irrigation repairs/modifications.'],
+      ['Access conditions',['access','gate','wheelbarrow'],5,'Account for limited access and hand-carry labor.'],
+      ['Soil / grading',['soil','grading','grade'],7,'Define soil quantity and grading assumptions.'],
+      ['Plant warranty',['plant warranty','replacement'],4,'State plant replacement/warranty terms.'],
+      ['Utilities',['utility','811','locate'],6,'Clarify utility locating and unknown services.'],
+      ['Cleanup',['cleanup','clean up'],4,'Define final cleanup.'],
+      ['Exclusions',['exclude','not included'],8,'State exclusions and owner responsibilities.']
+    ]
+  },
+  pressure: {
+    label:'Pressure Washing',
+    checks:[
+      ['Water source',['water source','customer water','water'],5,'State who supplies usable water.'],
+      ['Chemical treatment',['chemical','detergent','soft wash'],7,'Price chemicals and specialty treatment.'],
+      ['Stain limitations',['stain','rust','oil','efflorescence'],7,'Set expectations for stains that may not fully remove.'],
+      ['Protection',['protect','cover','plants','outlets'],7,'Include plant/electrical/property protection.'],
+      ['Access / height',['ladder','lift','height','roof'],6,'Account for elevated work or equipment.'],
+      ['Travel / minimum',['trip','minimum','service charge','travel'],5,'Protect small-job economics with a minimum charge.'],
+      ['Exclusions',['exclude','not included'],8,'State delicate surfaces and excluded restoration.']
+    ]
+  },
+  hvac: {
+    label:'HVAC',
+    checks:[
+      ['Equipment model / efficiency',['model','seer','afue','ton'],7,'Specify equipment model/performance level.'],
+      ['Refrigerant / line set',['refrigerant','line set','r-32','r32','r-454'],7,'Clarify refrigerant and line-set scope.'],
+      ['Electrical',['disconnect','breaker','electrical'],8,'State electrical scope and upgrades.'],
+      ['Duct modifications',['duct','plenum','register'],8,'Clarify included duct/plenum changes.'],
+      ['Permits / inspection',['permit','inspection'],6,'Include mechanical/electrical permits.'],
+      ['Removal / disposal',['removal','haul','dispose'],5,'Include old equipment removal/disposal.'],
+      ['Startup / commissioning',['startup','commission','test'],5,'Include startup and commissioning.'],
+      ['Warranty',['warranty'],4,'State parts/labor warranty.'],
+      ['Exclusions',['exclude','not included'],8,'List code upgrades or repairs not included.']
+    ]
+  },
+  electrical: {
+    label:'Electrical',
+    checks:[
+      ['Permit / inspection',['permit','inspection'],7,'Clarify permits and inspection fees.'],
+      ['Panel / breaker assumptions',['panel','breaker','service'],8,'State panel capacity and service-upgrade assumptions.'],
+      ['Patch / paint',['patch','drywall','paint'],6,'Clarify wall repair responsibility after access.'],
+      ['Devices / finish',['device','switch','receptacle','fixture'],5,'Specify fixture/device allowance or owner-supplied items.'],
+      ['Troubleshooting allowance',['troubleshoot','diagnostic','existing wiring'],7,'Address concealed/existing wiring defects.'],
+      ['Access',['attic','crawl','access'],5,'Account for difficult access.'],
+      ['Exclusions',['exclude','not included'],8,'List utility/company or low-voltage exclusions.']
+    ]
+  },
+  plumbing: {
+    label:'Plumbing',
+    checks:[
+      ['Permit / inspection',['permit','inspection'],7,'Clarify permit and inspection responsibility.'],
+      ['Fixture allowance',['fixture','faucet','toilet','allowance'],6,'Define fixtures and owner-supplied items.'],
+      ['Wall / floor repair',['drywall','tile repair','patch','floor repair'],7,'Clarify restoration after access.'],
+      ['Shutoff / access',['shutoff','access','crawl'],5,'Account for access and isolation conditions.'],
+      ['Disposal',['dispose','haul','removal'],5,'Include old fixture/material disposal.'],
+      ['Unknown piping conditions',['concealed','existing pipe','corrosion','unforeseen'],9,'Address concealed corrosion and unexpected piping.'],
+      ['Exclusions',['exclude','not included'],8,'List non-plumbing restoration or remediation exclusions.']
+    ]
+  }
+};
+
+const genericChecks = [
+  ['Scope clarity',['scope','install','replace','remove','provide'],6,'Use specific verbs, quantities, locations, and responsibilities.'],
+  ['Overhead / business cost',['overhead','mobilization','trip','supervision','admin'],8,'Make sure non-billable business cost is recovered somewhere in price.'],
+  ['Tax / fees',['tax','sales tax','fee'],4,'Confirm taxes and required fees are covered where applicable.'],
+  ['Schedule / duration',['schedule','days','weeks','duration','start'],4,'Set timeline expectations and dependencies.']
+];
+
+let currentAudit = null;
+
+function navigate(id){
+  $$('.page').forEach(p=>p.classList.remove('active'));
+  $('#'+id).classList.add('active');
+  $$('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===id));
+  $('#crumb').textContent = ({dashboard:'Dashboard',audit:'New Preflight',history:'Audit History',rules:'Trade Rules',pricing:'Pricing'})[id]||id;
+  $('#sidebar').classList.remove('show');
+  if(id==='history') renderHistory();
+}
+$$('.nav button').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.page)));
+$('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('show');
+$('#startAudit').onclick=$('#newFromRecent').onclick=()=>navigate('audit');
+
+function showToast(msg){
+  const t=$('#toast'); t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+function showDemoModal(){ $('#demoModal').classList.add('show'); }
+$('#loadDemoSide').onclick=$('#loadDemoHero').onclick=$('#loadDemoAudit').onclick=showDemoModal;
+$('#cancelDemo').onclick=()=>$('#demoModal').classList.remove('show');
+
+function loadDemo(){
+  $('#project').value='Sample — Oak Street Kitchen Remodel';
+  $('#trade').value='remodel';
+  $('#estimateTotal').value='22000';
+  $('#directCost').value='19000';
+  $('#targetMargin').value='30';
+  $('#laborHours').value='220';
+  $('#estimateText').value=`Kitchen remodel
+- Remove existing cabinets and countertops
+- Install new owner-selected cabinets
+- Install quartz countertops
+- Install tile backsplash
+- Install sink and faucet
+- Paint walls
+- Labor and standard materials included
+- Estimated duration: 4 weeks
+- 40% deposit to schedule, balance due at completion`;
+  $('#demoModal').classList.remove('show');
+  navigate('audit');
+  setTimeout(runAudit,100);
+}
+$('#confirmDemo').onclick=loadDemo;
+
+$('#clearAudit').onclick=()=>{
+  ['project','estimateTotal','directCost','laborHours','estimateText'].forEach(id=>$('#'+id).value='');
+  $('#targetMargin').value='30';$('#results').classList.remove('show');currentAudit=null;
+};
+
+function includesAny(text, words){ return words.some(w=>text.includes(w)); }
+
+function runAudit(){
+  const project=$('#project').value.trim()||'Untitled Estimate';
+  const trade=$('#trade').value;
+  const total=Number($('#estimateTotal').value||0);
+  const cost=Number($('#directCost').value||0);
+  const target=Number($('#targetMargin').value||30);
+  const hours=Number($('#laborHours').value||0);
+  const text=$('#estimateText').value.toLowerCase();
+
+  if(!total || !cost || !text.trim()){ showToast('Add estimate total, direct cost, and scope text first.'); return; }
+
+  const margin=((total-cost)/total)*100;
+  const safe=cost/(1-target/100);
+  const priceGap=Math.max(0,safe-total);
+  const checks=[...genericChecks,...tradeRules[trade].checks];
+  let flags=[];
+  let covered=0;
+
+  checks.forEach(([name,keywords,weight,advice])=>{
+    const found=includesAny(text,keywords);
+    if(found) covered++;
+    else flags.push({name,weight,advice,severity:weight>=8?'high':weight>=6?'medium':'low'});
+  });
+
+  if(margin<target){
+    const severity=margin<15?'high':'medium';
+    flags.unshift({
+      name:`Margin below ${target}% target`,
+      weight:margin<15?18:12,
+      advice:`At your entered direct cost, a ${target}% gross margin implies about ${money(safe)} before taxes or financing costs.`,
+      severity
+    });
+  }
+  if(hours>0 && total/hours<75){
+    flags.push({name:'Low revenue per labor hour',weight:7,advice:`This estimate produces about ${money(total/hours)} of revenue per planned labor hour before material cost. Verify crew time and non-billable time.`,severity:'medium'});
+  }
+  if(text.length<180){
+    flags.push({name:'Scope description is very short',weight:7,advice:'Short scopes create ambiguity. Add quantities, locations, product assumptions, exclusions, and responsibility boundaries.',severity:'medium'});
+  }
+
+  let raw=flags.reduce((s,f)=>s+f.weight,0);
+  let score=Math.min(100,Math.round(raw*1.35));
+  let label=score>=70?'High risk':score>=40?'Needs review':'Low risk';
+  let exposure=Math.max(priceGap, cost*(Math.min(0.22,flags.filter(f=>f.severity==='high').length*.025 + flags.filter(f=>f.severity==='medium').length*.012)));
+
+  currentAudit={id:Date.now(),date:new Date().toLocaleString(),project,trade,total,cost,target,hours,margin,safe,priceGap,score,label,coverage:Math.round((covered/checks.length)*100),flags,exposure,text:$('#estimateText').value};
+
+  $('#resultProject').textContent=project;
+  $('#resultMeta').textContent=`${tradeRules[trade].label} · ${new Date().toLocaleDateString()} · ${money(total)} estimate`;
+  $('#riskScore').textContent=score;
+  $('#riskLabel').textContent=label;
+  $('#riskLabel').style.background=score>=70?'#fee2e2':score>=40?'#fef3c7':'#dcfce7';
+  $('#riskLabel').style.color=score>=70?'#991b1b':score>=40?'#92400e':'#166534';
+  $('#currentMargin').textContent=margin.toFixed(1)+'%';
+  $('#safePrice').textContent=money(safe);
+  $('#priceGap').textContent=money(priceGap);
+  $('#flagsCount').textContent=flags.length;
+  $('#criticalCount').textContent=flags.filter(f=>f.severity==='high').length;
+  $('#coverage').textContent=currentAudit.coverage+'%';
+  $('#exposureAmount').textContent=money(exposure);
+
+  const list=$('#flagList');list.innerHTML='';
+  if(!flags.length){
+    list.innerHTML='<div class="empty">No major rule-based gaps found. Still review pricing, contract language, and job-specific risks manually.</div>';
+  } else {
+    flags.forEach((f,i)=>{
+      const div=document.createElement('div');div.className=`flag ${f.severity}`;
+      div.innerHTML=`<div class="flag-icon">${f.severity==='high'?'!':f.severity==='medium'?'⚠':'✓'}</div>
+        <div><h4>${f.name}</h4><p>${f.advice}</p></div>
+        <button data-i="${i}">Add review note</button>`;
+      div.querySelector('button').onclick=()=>{
+        $('#estimateText').value += `\n- REVIEW BEFORE SENDING: ${f.name} — ${f.advice}`;
+        showToast('Review note added to scope');
+      };
+      list.appendChild(div);
+    });
+  }
+  $('#results').classList.add('show');
+  $('#results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+$('#runAudit').onclick=runAudit;
+
+function getAudits(){ try{return JSON.parse(localStorage.getItem('pp_audits')||'[]')}catch{return[]} }
+function setAudits(a){ localStorage.setItem('pp_audits',JSON.stringify(a)); }
+
+$('#saveAudit').onclick=()=>{
+  if(!currentAudit)return;
+  const audits=getAudits().filter(a=>a.id!==currentAudit.id);
+  audits.unshift(currentAudit);setAudits(audits.slice(0,50));
+  showToast('Audit saved on this device');refreshDashboard();
+};
+
+function riskClass(score){return score>=70?'high':score>=40?'med':'low'}
+function refreshDashboard(){
+  const audits=getAudits();
+  $('#statAudits').textContent=audits.length;
+  $('#statExposure').textContent=money(audits.reduce((s,a)=>s+(a.exposure||0),0));
+  $('#statRisk').textContent=audits.length?Math.round(audits.reduce((s,a)=>s+a.score,0)/audits.length):'—';
+  const recent=$('#recentList');recent.innerHTML='';
+  if(!audits.length){
+    recent.innerHTML='<div class="empty">No saved audits yet. Load the demo or run your first preflight.</div>';return;
+  }
+  audits.slice(0,5).forEach(a=>{
+    const row=document.createElement('div');row.className='audit-row';
+    row.innerHTML=`<div><strong>${a.project}</strong><small>${tradeRules[a.trade]?.label||a.trade} · ${a.date}</small></div>
+      <div class="hide-sm"><strong>${money(a.total)}</strong><small>estimate</small></div>
+      <div class="risk ${riskClass(a.score)}">${a.score}/100</div>
+      <div class="hide-sm"><span class="pill">${a.flags.length} flags</span></div>`;
+    recent.appendChild(row);
+  });
+}
+function renderHistory(){
+  const audits=getAudits(), wrap=$('#historyWrap');
+  if(!audits.length){wrap.innerHTML='<div class="empty">Nothing saved yet.</div>';return;}
+  wrap.innerHTML=`<table><thead><tr><th>Project</th><th>Trade</th><th>Estimate</th><th>Margin</th><th>Risk</th><th>Exposure</th></tr></thead><tbody>${audits.map(a=>`
+    <tr><td><strong>${a.project}</strong><div class="sub">${a.date}</div></td><td>${tradeRules[a.trade]?.label||a.trade}</td><td>${money(a.total)}</td><td>${a.margin.toFixed(1)}%</td><td><span class="risk ${riskClass(a.score)}">${a.score}</span></td><td>${money(a.exposure)}</td></tr>`).join('')}</tbody></table>`;
+}
+$('#eraseHistory').onclick=()=>{ if(confirm('Erase locally saved audit history?')){localStorage.removeItem('pp_audits');renderHistory();refreshDashboard();showToast('History erased')} };
+
+function renderRules(){
+  const grid=$('#ruleGrid');grid.innerHTML='';
+  Object.entries(tradeRules).forEach(([key,val])=>{
+    const d=document.createElement('div');d.className='rule-card';
+    d.innerHTML=`<h4>${val.label}</h4><p>${val.checks.length} trade-specific preflight checks in this prototype.</p><div class="rule-tags">${val.checks.slice(0,7).map(c=>`<span>${c[0]}</span>`).join('')}</div>`;
+    grid.appendChild(d);
+  });
+}
+refreshDashboard();renderRules();
+</script>
+</body>
+</html>

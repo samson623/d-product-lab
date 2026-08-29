@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PixelGate — Amazon &amp; Etsy Image Compliance Auditor + Auto-Fixer</title>
+<style>
+:root{
+  --bg:#0a0d12;--pnl:#11161f;--pnl2:#161d28;--ln:#232d3d;
+  --tx:#e8eef7;--t2:#8ea3bf;--t3:#5d7391;
+  --ok:#35d29a;--warn:#f5b731;--err:#f4585e;--info:#4d9dff;--mag:#ff35b5;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--tx);
+  font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+.wrap{max-width:1320px;margin:0 auto;padding:20px}
+header.top{display:flex;align-items:center;gap:13px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;letter-spacing:-.4px}
+.logo .m{width:30px;height:30px;border-radius:8px;
+  background:linear-gradient(135deg,var(--ok),#2a86c9);display:grid;place-items:center;
+  color:#04121a;font-weight:900;font-size:14px}
+.bdg{font-size:11.5px;padding:4px 9px;border-radius:999px;border:1px solid var(--ln);
+  color:var(--t2);background:var(--pnl);white-space:nowrap}
+.bdg.g{color:var(--ok);border-color:#1d5946;background:#0c2a21}
+.sp{flex:1}
+.sub{color:var(--t2);font-size:13.5px;margin:7px 0 17px}
+.card{background:var(--pnl);border:1px solid var(--ln);border-radius:12px;padding:15px 16px;margin-bottom:13px}
+.card h2{margin:0 0 3px;font-size:13px;letter-spacing:.5px;text-transform:uppercase;color:var(--t2)}
+.card h2 .n{display:inline-grid;place-items:center;width:19px;height:19px;border-radius:5px;
+  background:var(--pnl2);border:1px solid var(--ln);color:var(--ok);font-size:11px;margin-right:7px}
+.hint{color:var(--t3);font-size:12.5px;margin:3px 0 11px}
+#dz{border:1.5px dashed var(--ln);border-radius:10px;padding:24px;text-align:center;cursor:pointer;
+  background:var(--pnl2);transition:.15s}
+#dz.hot{border-color:var(--ok);background:#0d2620}
+#dz b{color:var(--ok)}
+.btn{background:var(--pnl2);color:var(--tx);border:1px solid var(--ln);padding:8px 13px;
+  border-radius:8px;cursor:pointer;font-size:13px;font-family:inherit}
+.btn:hover{border-color:#3b5070}
+.btn.p{background:linear-gradient(180deg,var(--ok),#25b783);color:#052018;border:0;font-weight:700}
+.btn.p:disabled{opacity:.35;cursor:not-allowed}
+.btn.sm{padding:5px 9px;font-size:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+label.f{display:block;font-size:11.5px;color:var(--t2);margin:9px 0 4px;letter-spacing:.3px}
+select,input[type=text],input[type=number]{width:100%;background:var(--pnl2);color:var(--tx);
+  border:1px solid var(--ln);border-radius:7px;padding:7px 9px;font-size:13px;font-family:inherit}
+input:focus,select:focus{outline:none;border-color:var(--ok)}
+input[type=range]{width:100%;accent-color:var(--ok)}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.f3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+@media(max-width:700px){.f2,.f3{grid-template-columns:1fr}}
+.split{display:grid;grid-template-columns:352px 1fr;gap:13px}
+@media(max-width:1040px){.split{grid-template-columns:1fr}}
+.list{max-height:560px;overflow:auto;display:flex;flex-direction:column;gap:7px}
+.it{display:flex;gap:10px;align-items:center;padding:7px 9px;border-radius:9px;
+  border:1px solid var(--ln);background:var(--pnl2);cursor:pointer;transition:.12s}
+.it:hover{border-color:#3b5070}
+.it.sel{border-color:var(--ok);background:#0e2620}
+.it img{width:44px;height:44px;object-fit:contain;background:
+  repeating-conic-gradient(#2a3444 0 25%,#1c2531 0 50%) 50%/12px 12px;border-radius:6px;flex:none}
+.it .nm{flex:1;min-width:0}
+.it .nm b{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.it .nm span{font-size:11px;color:var(--t3);font-family:var(--mono)}
+.sc{font-family:var(--mono);font-size:11px;font-weight:700;padding:3px 7px;border-radius:6px;flex:none}
+.sc.pass{background:#0e2a21;color:var(--ok)}
+.sc.warn{background:#2b2410;color:var(--warn)}
+.sc.fail{background:#2c1216;color:var(--err)}
+.cvs{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+@media(max-width:760px){.cvs{grid-template-columns:1fr}}
+.cw{border:1px solid var(--ln);border-radius:10px;overflow:hidden;background:#070a0e}
+.cw .hd{display:flex;align-items:center;gap:8px;padding:6px 10px;background:#0d131c;
+  border-bottom:1px solid var(--ln);font-size:11.5px;color:var(--t2);letter-spacing:.4px}
+.cw canvas{display:block;width:100%;height:auto;
+  background:repeating-conic-gradient(#e9e9e9 0 25%,#fbfbfb 0 50%) 50%/16px 16px}
+.chks{display:flex;flex-direction:column;gap:6px}
+.ck{display:flex;gap:9px;padding:7px 10px;border-radius:8px;font-size:12.5px;
+  line-height:1.5;border:1px solid;align-items:flex-start}
+.ck .ic{font-weight:900;font-family:var(--mono);flex:none;width:13px;text-align:center}
+.ck.p{background:#0c231c;border-color:#1c5442;color:#a5ecd2}
+.ck.w{background:#282010;border-color:#5b4a1d;color:#ffe3ab}
+.ck.f{background:#291216;border-color:#5b2227;color:#ffc8cb}
+.ck.i{background:#0e1e2e;border-color:#234764;color:#bdd9f6}
+.ck b{color:#fff}
+.mt{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px;margin:2px 0 11px}
+.mt>div{background:var(--pnl2);border:1px solid var(--ln);border-radius:9px;padding:8px 10px}
+.mt .k{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px}
+.mt .v{font-size:16px;font-weight:700;font-family:var(--mono);margin-top:2px}
+.pill{display:inline-block;font-size:10.5px;font-family:var(--mono);padding:1px 6px;
+  border-radius:4px;background:#0a1017;border:1px solid var(--ln);color:var(--t3);margin-left:5px}
+code{font-family:var(--mono);font-size:11.5px;background:#0a1017;padding:1px 5px;
+  border-radius:4px;color:#9de9c6}
+.tabs{display:flex;gap:5px;margin-bottom:11px;flex-wrap:wrap}
+.tab{padding:6px 13px;border-radius:8px;border:1px solid var(--ln);background:var(--pnl2);
+  cursor:pointer;font-size:12.5px}
+.tab.on{background:linear-gradient(180deg,var(--ok),#25b783);color:#052018;border:0;font-weight:700}
+.pay{background:linear-gradient(135deg,#122a21,#0f1926);border-color:#1d5946}
+.pay .pr{font-size:28px;font-weight:800;font-family:var(--mono);color:var(--ok)}
+.hid{display:none!important}
+.bar{height:5px;background:var(--pnl2);border-radius:99px;overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--ok);width:0;transition:.2s}
+.foot{color:var(--t3);font-size:11.5px;text-align:center;padding:20px 0 32px;line-height:1.8}
+.lg{display:flex;gap:11px;flex-wrap:wrap;font-size:11px;color:var(--t3);margin-top:7px}
+.lg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+details.h{margin-top:10px;border-top:1px solid var(--ln);padding-top:9px}
+details.h summary{cursor:pointer;font-size:12.5px;color:var(--t2)}
+details.h div{font-size:12.5px;color:var(--t3);margin-top:7px;line-height:1.65}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="logo"><span class="m">PG</span>PixelGate</div>
+  <span class="bdg g" id="privB">🔒 0 bytes uploaded — 100% local</span>
+  <span class="bdg" id="licB">Free · audit unlimited, fix 3</span>
+  <div class="sp"></div>
+  <button class="btn sm" id="bDemo">Generate test image</button>
+  <button class="btn sm" id="bClear">Clear all</button>
+</header>
+<p class="sub">Audit product photos against every <b>Amazon main-image</b> and <b>Etsy listing</b> rule that causes
+silent suppression — then auto-repair them. True <code>RGB(255,255,255)</code> background, 85% frame fill,
+size ceilings, sRGB, and Amazon's <code>ASIN.MAIN.jpg</code> naming. Your images never leave this tab.</p>
+
+<div class="card">
+  <h2><span class="n">1</span>Load images</h2>
+  <p class="hint">JPEG, PNG, WebP, GIF, BMP. Drop your whole folder — batches are processed one at a time so
+  memory stays flat. EXIF rotation is honoured on load, so phone photos don't audit sideways.</p>
+  <div id="dz">
+    <div style="font-size:25px;margin-bottom:4px">🖼️</div>
+    <div><b>Drop images</b> or click to browse</div>
+    <div style="color:var(--t3);font-size:12px;margin-top:3px">nothing is uploaded — works with Wi-Fi off</div>
+  </div>
+  <input type="file" id="fi" class="hid" accept="image/*" multiple>
+  <div class="bar hid" id="pw"><i id="pb"></i></div>
+  <div id="li" style="font-size:12px;color:var(--t3);margin-top:8px"></div>
+</div>
+
+<div id="stage" class="hid">
+<div class="split">
+
+  <div>
+    <div class="card">
+      <h2>Target &amp; repair settings</h2>
+      <div class="tabs">
+        <div class="tab on" data-p="amazon">Amazon main</div>
+        <div class="tab" data-p="amazon-alt">Amazon alt</div>
+        <div class="tab" data-p="etsy">Etsy listing</div>
+      </div>
+      <div class="f2">
+        <div><label class="f">Output size (px, square)</label>
+          <select id="oSize">
+            <option value="2000">2000 × 2000 (recommended)</option>
+            <option value="1600">1600 × 1600</option>
+            <option value="3000">3000 × 3000</option>
+            <option value="1000">1000 × 1000 (zoom minimum)</option>
+          </select></div>
+        <div><label class="f">Format</label>
+          <select id="oFmt"><option value="image/jpeg">JPEG (preferred)</option>
+            <option value="image/png">PNG</option></select></div>
+      </div>
+      <label class="f">Target product fill — <b id="fillLbl">88</b>% of longest edge
+        <span class="pill">Amazon floor: 85%</span></label>
+      <input type="range" id="oFill" min="70" max="96" value="88">
+      <label class="f">Background whiten tolerance — <b id="tolLbl">14</b>
+        <span class="pill">higher = more aggressive</span></label>
+      <input type="range" id="oTol" min="0" max="60" value="14">
+      <label class="f">Edge barrier — <b id="edgLbl">32</b>
+        <span class="pill">stops bleed into white products</span></label>
+      <input type="range" id="oEdge" min="5" max="120" value="32">
+      <div class="f2">
+        <div><label class="f">JPEG quality</label>
+          <select id="oQ"><option value="0.85">85 (Amazon recommended)</option>
+            <option value="0.92">92 (max detail)</option>
+            <option value="0.78">78 (smaller files)</option></select></div>
+        <div><label class="f">Size ceiling</label>
+          <select id="oCap"><option value="10">10 MB (Amazon)</option>
+            <option value="1">1 MB (Etsy — auto-compress)</option>
+            <option value="0">No limit</option></select></div>
+      </div>
+      <label class="f" style="display:flex;gap:7px;align-items:center;margin-top:11px">
+        <input type="checkbox" id="cFlat" checked style="accent-color:var(--ok)">
+        Flatten transparency onto white <span class="pill">Etsy renders alpha as black</span></label>
+      <label class="f" style="display:flex;gap:7px;align-items:center">
+        <input type="checkbox" id="cFeather" checked style="accent-color:var(--ok)">
+        Feather anti-aliased halo into background</label>
+      <label class="f" style="display:flex;gap:7px;align-items:center">
+        <input type="checkbox" id="cShadow" style="accent-color:var(--ok)">
+        Keep contact shadow <span class="pill">allowed, but must sit on pure white</span></label>
+      <details class="h"><summary>Why "85% fill" is measured on the longest edge here</summary>
+        <div>Amazon's guidance says the product should occupy 85% of the frame without defining area versus
+        linear measure. Area is the stricter reading — but a tall narrow product (a bottle, a pen) can
+        <i>never</i> reach 85% of a square frame's area no matter how you crop it, so an area-based fixer would
+        loop forever. Enforcement in practice tracks the longest dimension, so that's what the repair targets.
+        The audit reports both numbers so you can see exactly where you stand.</div></details>
+    </div>
+
+    <div class="card">
+      <h2>Batch <span class="pill" id="cnt">0</span></h2>
+      <div class="row" style="margin-bottom:9px">
+        <button class="btn sm" id="bReaudit">Re-audit all</button>
+        <button class="btn sm" id="bFixAll">Repair all</button>
+      </div>
+      <div class="list" id="list"></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2><span class="n">2</span>Audit &amp; repair — <span id="curName" style="color:var(--tx)">—</span></h2>
+      <div class="mt" id="mt"></div>
+      <div class="cvs">
+        <div class="cw"><div class="hd">
+          <span>ORIGINAL</span><span class="sp"></span>
+          <label style="display:flex;gap:5px;align-items:center;cursor:pointer">
+            <input type="checkbox" id="cOverlay" checked style="accent-color:var(--mag)">
+            <span>diagnostic overlay</span></label>
+        </div><canvas id="cvA"></canvas></div>
+        <div class="cw"><div class="hd"><span>REPAIRED</span><span class="sp"></span>
+          <span id="outMeta" style="font-family:var(--mono)"></span></div>
+          <canvas id="cvB"></canvas></div>
+      </div>
+      <div class="lg">
+        <span><i style="background:var(--mag)"></i>background not pure white</span>
+        <span><i style="background:#4d9dff"></i>detected product bounds</span>
+        <span><i style="background:var(--warn)"></i>suspected overlay / badge</span>
+        <span><i style="background:var(--err)"></i>product touching frame edge</span>
+      </div>
+      <div class="row" style="margin-top:11px">
+        <button class="btn p" id="bFix">Repair this image</button>
+        <button class="btn" id="bDl">Download repaired</button>
+        <span class="sp"></span>
+        <span id="fixMsg" style="font-size:12px;color:var(--t3)"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Compliance report</h2>
+      <div class="chks" id="chks"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">3</span>Export</h2>
+      <p class="hint">Amazon matches images to listings by filename. The convention is
+      <code>[identifier].[variant].[ext]</code> — first image becomes <code>MAIN</code>, the rest
+      <code>PT01…PT08</code>. Repaired files are packed into a ZIP written byte-by-byte in this tab
+      (stored, not deflated — JPEG is already compressed, so there's nothing to gain and no library to load).</p>
+      <div class="f3">
+        <div><label class="f">ASIN / SKU prefix</label><input type="text" id="xAsin" placeholder="B08XYZ1234"></div>
+        <div><label class="f">Naming scheme</label><select id="xScheme">
+          <option value="amazon">Amazon variant codes (MAIN, PT01…)</option>
+          <option value="seq">Prefix + sequence (-01, -02…)</option>
+          <option value="orig">Keep original filenames</option>
+        </select></div>
+        <div><label class="f">Include</label><select id="xWhich">
+          <option value="fixed">Repaired only</option>
+          <option value="passing">Repaired + already-passing</option>
+        </select></div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn p" id="bZip">Download ZIP of repaired images</button>
+        <button class="btn" id="bCsv">Download audit report (CSV)</button>
+        <span class="sp"></span><span id="xMsg" style="font-size:12px;color:var(--t3)"></span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="card pay">
+  <div class="row" style="align-items:flex-start;gap:22px">
+    <div style="flex:1;min-width:250px">
+      <h2 style="color:var(--ok)">Unlock the full batch</h2>
+      <div class="pr">$39<span style="font-size:14px;color:var(--t2);font-weight:400"> once · no subscription</span></div>
+      <p class="hint" style="margin-top:7px">Auditing is always free and unlimited. The free tier repairs and
+      exports 3 images; a licence removes the cap permanently. Verified offline, so the tool keeps working with
+      no network and your photos still never leave the machine.</p>
+      <div class="row">
+        <input type="text" id="lk" placeholder="PG-XXXX-XXXX-XXXX" style="max-width:230px;font-family:var(--mono)">
+        <button class="btn p" id="bLic">Activate</button>
+        <button class="btn sm" id="bDemoKey">Demo key</button>
+      </div>
+      <div id="lm" style="font-size:12px;margin-top:7px;color:var(--t3)"></div>
+    </div>
+    <div style="flex:1;min-width:250px;font-size:12.5px;color:var(--t2);line-height:1.75">
+      <b style="color:var(--tx)">What one suppressed listing costs</b><br>
+      A suppressed listing loses 90–100% of organic sessions within 24 hours. Published estimates put a
+      $50K/month SKU at roughly $1,150/day dark, and a $80K/month hero SKU near $2,650/day.<br><br>
+      <b style="color:var(--tx)">Why not a free resizer</b><br>
+      Resizing was never the failure. Off-white backgrounds, sub-85% fill, badges and alpha channels are —
+      and no free resizer detects any of them, let alone repairs them.
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  PixelGate — single file, zero dependencies, zero backend, zero uploads.<br>
+  Not affiliated with Amazon or Etsy. Requirements are enforced by those platforms and can change;
+  always spot-check a repaired image before a large upload.
+</div>
+</div>
+
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════════════════════
+   PixelGate — marketplace image compliance auditor + repairer.
+   Everything runs in-tab: canvas pixel analysis, flood-fill background repair,
+   JPEG/PNG marker parsing, and a hand-rolled ZIP writer. No libraries.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const $=id=>document.getElementById(id);
+const S={items:[],cur:-1,preset:'amazon',licensed:false,FREE:3};
+
+/* ───────── platform presets ───────── */
+const PRESETS={
+  amazon:{name:'Amazon main image',size:2000,minLong:1000,idealLong:1600,maxLong:10000,
+    capMB:10,pureWhite:true,fill:85,allowText:false,allowAlpha:false,fmt:'image/jpeg',q:.85},
+  'amazon-alt':{name:'Amazon alternate image',size:2000,minLong:1000,idealLong:1600,maxLong:10000,
+    capMB:10,pureWhite:false,fill:0,allowText:true,allowAlpha:false,fmt:'image/jpeg',q:.85},
+  etsy:{name:'Etsy listing photo',size:2000,minLong:635,idealLong:2000,maxLong:10000,
+    capMB:1,pureWhite:false,fill:0,allowText:true,allowAlpha:false,fmt:'image/jpeg',q:.85}
+};
+
+/* ═══════════ 1. Container-level inspection (before any decoding) ═══════════
+   Colour space and alpha can't be seen from canvas — getImageData always hands
+   back 8-bit sRGB RGBA regardless of what the file actually contained. A CMYK
+   JPEG will decode and look fine here yet upload to Etsy with wrong colours,
+   so the only honest way to catch it is to read the file's own markers.       */
+
+function inspectJPEG(u8){
+  const r={container:'JPEG',components:0,icc:false,adobe:false,progressive:false,
+           exifOrient:1,density:null};
+  let p=2;
+  while(p<u8.length-1){
+    if(u8[p]!==0xFF){p++;continue}
+    let m=u8[p+1];
+    while(m===0xFF){p++;m=u8[p+1]}
+    if(m===0xD8||m===0x01||(m>=0xD0&&m<=0xD7)){p+=2;continue}
+    if(m===0xD9||m===0xDA)break;                       // start of scan → done
+    const len=(u8[p+2]<<8)|u8[p+3];
+    const seg=p+4, end=p+2+len;
+    if(m===0xC0||m===0xC1)      {r.components=u8[seg+5]}
+    else if(m===0xC2)           {r.components=u8[seg+5];r.progressive=true}
+    else if(m===0xE0){                                  // APP0 / JFIF density
+      if(String.fromCharCode(...u8.subarray(seg,seg+4))==='JFIF')
+        r.density={unit:u8[seg+7],x:(u8[seg+8]<<8)|u8[seg+9],y:(u8[seg+10]<<8)|u8[seg+11]};
+    }
+    else if(m===0xE1){                                  // APP1 / EXIF
+      if(String.fromCharCode(...u8.subarray(seg,seg+4))==='Exif'){
+        const t=seg+6, le=u8[t]===0x49;
+        const g16=o=>le?(u8[o]|u8[o+1]<<8):(u8[o]<<8|u8[o+1]);
+        const g32=o=>le?(u8[o]|u8[o+1]<<8|u8[o+2]<<16|u8[o+3]<<24)
+                       :(u8[o]<<24|u8[o+1]<<16|u8[o+2]<<8|u8[o+3]);
+        const ifd=t+g32(t+4), n=g16(ifd);
+        for(let i=0;i<n;i++){const e=ifd+2+i*12;
+          if(g16(e)===0x0112){r.exifOrient=g16(e+8);break}}
+      }
+    }
+    else if(m===0xE2){                                  // APP2 / ICC_PROFILE
+      if(String.fromCharCode(...u8.subarray(seg,seg+11))==='ICC_PROFILE')r.icc=true;
+    }
+    else if(m===0xEE){                                  // APP14 / Adobe (CMYK hint)
+      if(String.fromCharCode(...u8.subarray(seg,seg+5))==='Adobe')r.adobe=true;
+    }
+    p=end;
+  }
+  return r;
+}
+function inspectPNG(u8){
+  const r={container:'PNG',colorType:-1,bitDepth:8,hasTRNS:false,icc:false,srgb:false,
+           interlace:0,components:3};
+  let p=8;
+  const rd32=o=>(u8[o]<<24|u8[o+1]<<16|u8[o+2]<<8|u8[o+3])>>>0;
+  while(p<u8.length-8){
+    const len=rd32(p), type=String.fromCharCode(u8[p+4],u8[p+5],u8[p+6],u8[p+7]);
+    const d=p+8;
+    if(type==='IHDR'){r.bitDepth=u8[d+8];r.colorType=u8[d+9];r.interlace=u8[d+12]}
+    else if(type==='tRNS')r.hasTRNS=true;
+    else if(type==='iCCP')r.icc=true;
+    else if(type==='sRGB')r.srgb=true;
+    else if(type==='IDAT'||type==='IEND')break;
+    p=d+len+4;
+  }
+  r.components=(r.colorType===6||r.colorType===2)?3:(r.colorType===4||r.colorType===0)?1:3;
+  r.alphaChannel=(r.colorType===4||r.colorType===6)||r.hasTRNS;
+  return r;
+}
+function inspect(u8,type){
+  if(u8[0]===0xFF&&u8[1]===0xD8)return inspectJPEG(u8);
+  if(u8[0]===0x89&&u8[1]===0x50)return inspectPNG(u8);
+  if(u8[0]===0x52&&u8[1]===0x49)return{container:'WebP'};
+  if(u8[0]===0x47&&u8[1]===0x49)return{container:'GIF'};
+  if(u8[0]===0x42&&u8[1]===0x4D)return{container:'BMP'};
+  if((u8[0]===0x49&&u8[1]===0x49)||(u8[0]===0x4D&&u8[1]===0x4D))return{container:'TIFF'};
+  return{container:(type||'unknown').replace('image/','').toUpperCase()};
+}
+
+/* ═══════════ 2. Pixel analysis ═══════════
+   Runs on a downscaled proxy (≤900px) so a 40-image batch of 6000px photos
+   stays interactive. All results are normalised 0..1 so they map back onto the
+   full-resolution source for the actual repair.                              */
+
+const ANALYSIS_MAX=900;
+function proxyOf(bmp){
+  const s=Math.min(1,ANALYSIS_MAX/Math.max(bmp.width,bmp.height));
+  const w=Math.max(1,Math.round(bmp.width*s)),h=Math.max(1,Math.round(bmp.height*s));
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  const x=c.getContext('2d',{willReadFrequently:true});
+  x.drawImage(bmp,0,0,w,h);
+  return{canvas:c,ctx:x,w,h,data:x.getImageData(0,0,w,h)};
+}
+
+const dist2White=(r,g,b)=>Math.max(255-r,255-g,255-b);   // Chebyshev to pure white
+const lum=(r,g,b)=>0.2126*r+0.7152*g+0.0722*b;
+
+/** Sobel gradient magnitude map — used as a barrier so the background flood
+ *  fill cannot cross a product's contour (critical for white-on-white). */
+function sobel(px,w,h){
+  const L=new Float32Array(w*h);
+  for(let i=0,j=0;i<px.length;i+=4,j++)L[j]=lum(px[i],px[i+1],px[i+2]);
+  const M=new Float32Array(w*h);
+  for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+    const o=y*w+x;
+    const gx=-L[o-w-1]-2*L[o-1]-L[o+w-1]+L[o-w+1]+2*L[o+1]+L[o+w+1];
+    const gy=-L[o-w-1]-2*L[o-w]-L[o-w+1]+L[o+w-1]+2*L[o+w]+L[o+w+1];
+    M[o]=Math.sqrt(gx*gx+gy*gy);
+  }
+  return M;
+}
+
+/** Connected background mask, seeded from the frame border.
+ *  A pixel joins the background if it is within `tol` of pure white AND the
+ *  local gradient is below `edgeMax`. Iterative queue — a recursive fill blows
+ *  the stack somewhere around 2 megapixels. */
+function bgMask(px,w,h,tol,edgeMax,mag){
+  const mask=new Uint8Array(w*h);
+  const q=new Int32Array(w*h);let qh=0,qt=0;
+  const ok=i=>{const o=i*4;
+    return dist2White(px[o],px[o+1],px[o+2])<=tol&&(!mag||mag[i]<=edgeMax)};
+  const push=i=>{if(!mask[i]&&ok(i)){mask[i]=1;q[qt++]=i}};
+  for(let x=0;x<w;x++){push(x);push((h-1)*w+x)}
+  for(let y=0;y<h;y++){push(y*w);push(y*w+w-1)}
+  while(qh<qt){
+    const i=q[qh++],x=i%w,y=(i-x)/w;
+    if(x>0)push(i-1); if(x<w-1)push(i+1);
+    if(y>0)push(i-w); if(y<h-1)push(i+w);
+  }
+  return mask;
+}
+
+function analyze(px,w,h,tol,edgeMax){
+  const mag=sobel(px,w,h);
+  const mask=bgMask(px,w,h,tol,edgeMax,mag);
+
+  // ── border ring statistics: the single most predictive signal
+  const ring=Math.max(2,Math.round(Math.min(w,h)*0.02));
+  let bTot=0,bPure=0,bNear=0,bFar=0,worst=0,worstPx=[255,255,255];
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    if(x>=ring&&x<w-ring&&y>=ring&&y<h-ring)continue;
+    const o=(y*w+x)*4,d=dist2White(px[o],px[o+1],px[o+2]);
+    bTot++;
+    if(d===0)bPure++; else if(d<=12)bNear++; else bFar++;
+    if(d>worst){worst=d;worstPx=[px[o],px[o+1],px[o+2]]}
+  }
+
+  // ── product bounding box from the inverse of the background mask
+  let x0=w,y0=h,x1=-1,y1=-1,ink=0;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    if(mask[y*w+x])continue;
+    ink++;
+    if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y;
+  }
+  const found=x1>=0;
+  if(!found){x0=y0=0;x1=w-1;y1=h-1}
+  const bw=x1-x0+1,bh=y1-y0+1;
+  const fillLong=Math.max(bw/w,bh/h)*100;
+  const fillArea=(bw*bh)/(w*h)*100;
+  const inkArea=ink/(w*h)*100;
+
+  // ── product cut off at the frame edge
+  const pad=Math.max(1,Math.round(Math.min(w,h)*0.004));
+  const cut={l:x0<=pad,t:y0<=pad,r:x1>=w-1-pad,b:y1>=h-1-pad};
+  const cutAny=cut.l||cut.t||cut.r||cut.b;
+
+  // ── non-pure-white pixels *inside* the connected background region.
+  //    These are exactly what Amazon's scanner objects to: visually white,
+  //    numerically not 255,255,255.
+  let bgTot=0,bgImpure=0;
+  for(let i=0;i<mask.length;i++){
+    if(!mask[i])continue;
+    bgTot++;
+    const o=i*4;
+    if(dist2White(px[o],px[o+1],px[o+2])!==0)bgImpure++;
+  }
+
+  // ── overlay / badge heuristic: saturated, high-gradient clusters sitting in
+  //    the outer band of the frame, well away from the product mass. Reported
+  //    as a warning only — this is a hint, never a verdict.
+  let sat=0,satEdge=0;
+  const band=Math.round(Math.min(w,h)*0.16);
+  const blobs=[];
+  for(let y=0;y<h;y+=2)for(let x=0;x<w;x+=2){
+    const i=y*w+x,o=i*4;
+    if(mask[i])continue;
+    const r=px[o],g=px[o+1],b=px[o+2];
+    const mx=Math.max(r,g,b),mn=Math.min(r,g,b);
+    const s=mx===0?0:(mx-mn)/mx;
+    if(s>0.55&&mx>110){
+      sat++;
+      const edge=(x<band||x>w-band||y<band||y>h-band);
+      const outside=(x<x0+bw*0.12||x>x1-bw*0.12||y<y0+bh*0.12||y>y1-bh*0.12);
+      if(edge&&outside&&mag[i]>28){satEdge++;blobs.push([x,y])}
+    }
+  }
+
+  // ── hard border frame: rows/cols at the very edge that are almost entirely
+  //    non-background (a decorative stroke around the whole image)
+  let framed=0;
+  for(const [ax,ay] of [[0,0],[w-1,0],[0,h-1]]){}
+  const rowSolid=y=>{let c=0;for(let x=0;x<w;x++)if(!mask[y*w+x])c++;return c/w};
+  const colSolid=x=>{let c=0;for(let y=0;y<h;y++)if(!mask[y*w+x])c++;return c/h};
+  const edges=[rowSolid(1),rowSolid(h-2),colSolid(1),colSolid(w-2)];
+  framed=edges.filter(v=>v>0.9).length;
+
+  return{mask,mag,ring,
+    border:{tot:bTot,pure:bPure,near:bNear,far:bFar,worst,worstPx,
+      purePct:bTot?bPure/bTot*100:0},
+    bg:{tot:bgTot,impure:bgImpure,impurePct:bgTot?bgImpure/bgTot*100:0,
+      coverPct:bgTot/(w*h)*100},
+    box:{x0:x0/w,y0:y0/h,x1:(x1+1)/w,y1:(y1+1)/h,found},
+    fillLong,fillArea,inkArea,cut,cutAny,
+    overlay:{sat,satEdge,blobs:blobs.slice(0,600)},framed};
+}
+
+/* ═══════════ 3. Compliance rules ═══════════ */
+function rules(it){
+  const P=PRESETS[S.preset],a=it.an,C=[];
+  const long=Math.max(it.w,it.h),short=Math.min(it.w,it.h);
+  const mb=it.bytes/1048576;
+
+  C.push(long<P.minLong
+    ?['f',`Longest side is <b>${long}px</b> — below the ${P.minLong}px ${
+        S.preset==='etsy'?'Etsy search threshold':'zoom threshold'}. ${
+        S.preset==='etsy'?'Images under this may rank lower.':'Zoom stays disabled, which measurably cuts conversion.'}`]
+    :long<P.idealLong
+      ?['w',`Longest side <b>${long}px</b> clears the minimum but is under the ${P.idealLong}px recommendation. Zoom will look soft on retina displays.`]
+      :long>P.maxLong
+        ?['f',`Longest side <b>${long}px</b> exceeds the ${P.maxLong}px maximum — the upload will be rejected outright.`]
+        :['p',`Resolution <b>${it.w}×${it.h}</b> — comfortably in spec.`]);
+
+  const ar=it.w/it.h;
+  C.push(Math.abs(ar-1)<0.02
+    ?['p','Square 1:1 aspect ratio — the safest choice on both platforms.']
+    :['w',`Aspect ratio is <b>${ar.toFixed(2)}:1</b>. Square is recommended; non-square images get cropped differently across search, mobile and homepage placements, so edge detail can vanish.`]);
+
+  if(P.capMB){
+    C.push(mb>P.capMB
+      ?['f',`File is <b>${mb.toFixed(2)} MB</b>, over the ${P.capMB} MB ceiling. ${
+          S.preset==='etsy'?'Etsy uploads above 1 MB fail intermittently, especially on slow connections.':'Amazon will reject it.'}`]
+      :['p',`File size <b>${mb.toFixed(2)} MB</b> — under the ${P.capMB} MB ceiling.`]);
+  }
+
+  const cont=it.meta.container;
+  C.push(cont==='JPEG'?['p','JPEG — the preferred format on both platforms.']
+    :cont==='PNG'?['w','PNG is accepted but produces much larger files for photographic content, which pushes you toward the size ceiling for no visual gain.']
+    :cont==='WebP'?['f','WebP is not an accepted listing format. Convert to JPEG — the repair below does this automatically.']
+    :cont==='TIFF'?['w','TIFF is accepted by Amazon but must be flattened; layered files are rejected.']
+    :['w',`Container reported as <b>${cont}</b>. Convert to JPEG to be safe.`]);
+
+  if(it.meta.components===4||it.meta.adobe)
+    C.push(['f','<b>CMYK colour data detected</b> (4 components / Adobe APP14 marker). This is the classic print-file mistake: it decodes and previews fine but uploads with washed-out or shifted colour. Must be converted to sRGB.']);
+  else if(cont==='JPEG'&&!it.meta.icc)
+    C.push(['i','No embedded ICC profile. Untagged JPEGs are treated as sRGB, which is what both platforms want — fine, just not explicit.']);
+  else if(it.meta.icc)
+    C.push(['i','An ICC profile is embedded. If it is anything other than sRGB, colours will shift on upload. The repair re-encodes through canvas, which normalises to sRGB.']);
+
+  if(it.hasAlpha)
+    C.push(P.allowAlpha?['i','Image contains an alpha channel.']
+      :['f','<b>Transparency detected.</b> Etsy does not support transparent listing images — every transparent pixel renders <b>black</b> on the live listing. Amazon flattens unpredictably. Must be composited onto white.']);
+
+  if(it.meta.exifOrient&&it.meta.exifOrient>1)
+    C.push(['w',`EXIF orientation flag is <b>${it.meta.exifOrient}</b>, so the stored pixels are rotated. Some upload pipelines ignore this tag and your image appears sideways on the listing. The repair bakes rotation into the pixels.`]);
+
+  if(it.meta.progressive)
+    C.push(['i','Progressive JPEG. Generally fine, but baseline is the safer bet for older ingestion pipelines.']);
+
+  if(P.pureWhite){
+    const b=a.border,bg=a.bg;
+    if(b.purePct>=99.5&&bg.impurePct<0.2)
+      C.push(['p',`Background is <b>true RGB(255,255,255)</b> — ${b.purePct.toFixed(1)}% of the border ring is exactly pure white.`]);
+    else if(b.far/b.tot>0.25)
+      C.push(['f',`Background is <b>not white at all</b> over ${(b.far/b.tot*100).toFixed(0)}% of the border. Darkest border pixel is <code>rgb(${b.worstPx.join(',')})</code>. A main image needs pure white.`]);
+    else
+      C.push(['f',`<b>Off-white background.</b> Only ${b.purePct.toFixed(1)}% of the border ring is exactly 255,255,255; <b>${bg.impurePct.toFixed(1)}%</b> of the detected background is near-white-but-not-pure (worst pixel <code>rgb(${b.worstPx.join(',')})</code>). This is invisible on your monitor and is the single most common cause of silent suppression — Amazon compares against the exact value.`]);
+
+    C.push(a.fillLong>=P.fill
+      ?['p',`Product fills <b>${a.fillLong.toFixed(1)}%</b> of the longest edge (bounding box = ${a.fillArea.toFixed(1)}% of frame area) — clears the 85% rule.`]
+      :['f',`Product fills only <b>${a.fillLong.toFixed(1)}%</b> of the longest edge (${a.fillArea.toFixed(1)}% of frame area). It is floating in white space — a documented rejection trigger. Repair will recrop to ${$('oFill').value}%.`]);
+
+    if(a.cutAny)
+      C.push(['f',`Product is <b>touching or cropped at the frame edge</b> (${
+        Object.entries(a.cut).filter(([,v])=>v).map(([k])=>({l:'left',t:'top',r:'right',b:'bottom'})[k]).join(', ')
+      }). Main images must show the entire product with nothing cut off. Repair cannot invent the missing pixels — reshoot or recrop from a wider original.`]);
+
+    if(a.framed>=2)
+      C.push(['f',`A <b>border or frame stroke</b> runs around the image (${a.framed} of 4 edges are solid). Borders are explicitly disallowed on main images.`]);
+
+    if(a.overlay.satEdge>Math.max(40,a.overlay.sat*0.1))
+      C.push(['w',`<b>Possible text, badge or watermark</b> — ${a.overlay.satEdge} saturated high-contrast pixel clusters sit in the outer band, away from the product mass (shown in amber on the overlay). Badges like "Best Seller", "Sale", star ratings and price tags cause immediate suppression. This is a heuristic, so eyeball the overlay before acting.`]);
+
+    if(!a.box.found)
+      C.push(['w','No distinct product could be separated from the background. Either the image is nearly uniform, or the product tone is so close to the background that the tolerance needs lowering.']);
+  } else {
+    C.push(['i',`${P.name}: no pure-white or 85% fill requirement. ${
+      S.preset==='etsy'?'Etsy actively encourages lifestyle and styled photography — resolution and file size are what matter.'
+      :'Lifestyle shots, infographics and text callouts are all permitted in slots 2–9.'}`]);
+  }
+
+  const score=C.filter(c=>c[0]==='f').length===0
+    ?(C.filter(c=>c[0]==='w').length===0?'pass':'warn'):'fail';
+  return{checks:C,score,
+    fails:C.filter(c=>c[0]==='f').length,warns:C.filter(c=>c[0]==='w').length};
+}
+
+/* ═══════════ 4. Repair pipeline ═══════════
+   Order matters. Crop at full resolution first so no detail is thrown away,
+   scale once onto a pure-white square, then whiten and feather at output
+   resolution — resampling after whitening would reintroduce off-white pixels
+   along every edge, which is precisely the defect we are removing.           */
+
+async function repair(it){
+  const P=PRESETS[S.preset];
+  const N=+$('oSize').value;
+  const target=+$('oFill').value/100;
+  const tol=+$('oTol').value, edgeMax=+$('oEdge').value;
+  const fmt=$('oFmt').value, q=+$('oQ').value;
+  const capMB=+$('oCap').value;
+  const flat=$('cFlat').checked, feather=$('cFeather').checked;
+
+  const bmp=await bitmapOf(it);
+  const out=document.createElement('canvas');out.width=out.height=N;
+  const cx=out.getContext('2d',{willReadFrequently:true});
+  cx.fillStyle='#fff';cx.fillRect(0,0,N,N);          // pure white ground truth
+
+  let sx=0,sy=0,sw=bmp.width,sh=bmp.height;
+  if(P.pureWhite&&it.an.box.found){
+    const b=it.an.box;
+    sx=b.x0*bmp.width; sy=b.y0*bmp.height;
+    sw=(b.x1-b.x0)*bmp.width; sh=(b.y1-b.y0)*bmp.height;
+    if(!$('cShadow').checked){/* bbox already excludes background */}
+    // small guard band so anti-aliased contour pixels survive the crop
+    const g=Math.max(1,Math.round(Math.max(sw,sh)*0.01));
+    sx=Math.max(0,sx-g); sy=Math.max(0,sy-g);
+    sw=Math.min(bmp.width-sx,sw+g*2); sh=Math.min(bmp.height-sy,sh+g*2);
+  }
+  const scale=(P.pureWhite?target*N:N)/Math.max(sw,sh);
+  const dw=Math.round(sw*scale),dh=Math.round(sh*scale);
+  const dx=Math.round((N-dw)/2),dy=Math.round((N-dh)/2);
+  cx.imageSmoothingEnabled=true;cx.imageSmoothingQuality='high';
+  cx.drawImage(bmp,sx,sy,sw,sh,dx,dy,dw,dh);
+
+  // flatten alpha (drawing over the white fill already did this, but a source
+  // with alpha inside the product body needs the explicit composite)
+  if(flat&&it.hasAlpha){
+    const tmp=cx.getImageData(0,0,N,N);
+    const d=tmp.data;
+    for(let i=0;i<d.length;i+=4){
+      const a=d[i+3]/255;
+      if(a<1){d[i]=d[i]*a+255*(1-a);d[i+1]=d[i+1]*a+255*(1-a);
+              d[i+2]=d[i+2]*a+255*(1-a);d[i+3]=255}
+    }
+    cx.putImageData(tmp,0,0);
+  }
+
+  if(P.pureWhite){
+    const img=cx.getImageData(0,0,N,N),d=img.data;
+    const mag=sobel(d,N,N);
+    const mask=bgMask(d,N,N,tol,edgeMax,mag);
+    // hard-snap the connected background to exact pure white
+    for(let i=0;i<mask.length;i++){
+      if(!mask[i])continue;
+      const o=i*4;d[o]=255;d[o+1]=255;d[o+2]=255;d[o+3]=255;
+    }
+    // feather: any non-background pixel adjacent to background that is still
+    // near-white is a resampling halo — push it the rest of the way to white
+    if(feather){
+      const halo=[];
+      for(let y=1;y<N-1;y++)for(let x=1;x<N-1;x++){
+        const i=y*N+x;
+        if(mask[i])continue;
+        if(mask[i-1]||mask[i+1]||mask[i-N]||mask[i+N]){
+          const o=i*4,dd=dist2White(d[o],d[o+1],d[o+2]);
+          if(dd<=Math.max(tol,18))halo.push(i);
+        }
+      }
+      for(const i of halo){const o=i*4;d[o]=255;d[o+1]=255;d[o+2]=255}
+    }
+    cx.putImageData(img,0,0);
+  }
+
+  // encode, honouring the size ceiling by stepping quality down
+  let blob=await new Promise(r=>out.toBlob(r,fmt,q));
+  if(capMB>0&&fmt==='image/jpeg'){
+    const cap=capMB*1048576;
+    for(const qq of [q,.82,.76,.7,.64,.58,.5]){
+      if(blob.size<=cap)break;
+      blob=await new Promise(r=>out.toBlob(r,fmt,qq));
+    }
+  }
+  if(capMB>0&&blob.size>capMB*1048576&&fmt==='image/png'){
+    blob=await new Promise(r=>out.toBlob(r,'image/jpeg',.85));
+  }
+
+  // verify the repair rather than assuming it worked
+  const vp=cx.getImageData(0,0,N,N).data;
+  let vTot=0,vBad=0;
+  const ring=Math.max(2,Math.round(N*0.02));
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    if(x>=ring&&x<N-ring&&y>=ring&&y<N-ring)continue;
+    const o=(y*N+x)*4;vTot++;
+    if(dist2White(vp[o],vp[o+1],vp[o+2])!==0)vBad++;
+  }
+  const va=analyze(vp,N,N,tol,edgeMax);
+  bmp.close&&bmp.close();
+  return{blob,canvas:out,size:N,
+    verify:{borderPure:vTot?(1-vBad/vTot)*100:100,fillLong:va.fillLong,fillArea:va.fillArea}};
+}
+
+/* ═══════════ 5. Loading ═══════════ */
+async function bitmapOf(it){
+  // imageOrientation:'from-image' bakes the EXIF rotation into the pixels
+  try{return await createImageBitmap(it.file,{imageOrientation:'from-image'})}
+  catch{return await createImageBitmap(it.file)}
+}
+async function ingest(files){
+  const list=[...files].filter(f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp|gif|bmp|tiff?)$/i.test(f.name));
+  if(!list.length){alert('No images found in that drop.');return}
+  $('pw').classList.remove('hid');
+  let done=0;
+  for(const f of list){
+    try{
+      const buf=await f.arrayBuffer();
+      const u8=new Uint8Array(buf.slice(0,Math.min(buf.byteLength,262144)));
+      const meta=inspect(u8,f.type);
+      const bmp=await createImageBitmap(f,{imageOrientation:'from-image'}).catch(()=>createImageBitmap(f));
+      const px=proxyOf(bmp);
+      let hasAlpha=false;
+      if(meta.alphaChannel||meta.container==='PNG'||meta.container==='WebP'||meta.container==='GIF'){
+        const d=px.data.data;
+        for(let i=3;i<d.length;i+=4)if(d[i]<255){hasAlpha=true;break}
+      }
+      const it={file:f,name:f.name,bytes:f.size,w:bmp.width,h:bmp.height,
+        meta,hasAlpha,thumb:px.canvas.toDataURL('image/jpeg',.7),
+        proxy:px,an:null,fixed:null};
+      it.an=analyze(px.data.data,px.w,px.h,+$('oTol').value,+$('oEdge').value);
+      it.rep=rules(it);
+      S.items.push(it);
+      bmp.close&&bmp.close();
+    }catch(e){console.warn('skip',f.name,e)}
+    done++;$('pb').style.width=(done/list.length*100)+'%';
+  }
+  setTimeout(()=>$('pw').classList.add('hid'),400);
+  $('stage').classList.remove('hid');
+  const fails=S.items.filter(i=>i.rep.score==='fail').length;
+  $('li').innerHTML=`✓ ${S.items.length} image(s) analysed locally — `+
+    `<b style="color:${fails?'var(--err)':'var(--ok)'}">${fails} would fail</b> `+
+    `${PRESETS[S.preset].name} rules.`;
+  renderList();select(S.cur<0?0:S.cur);
+}
+
+/* ═══════════ 6. Rendering ═══════════ */
+function renderList(){
+  $('cnt').textContent=S.items.length;
+  $('list').innerHTML=S.items.map((it,i)=>{
+    const r=it.rep;
+    const tag=r.score==='pass'?'PASS':r.score==='warn'?r.warns+'W':r.fails+'✕';
+    return `<div class="it ${i===S.cur?'sel':''}" data-i="${i}">
+      <img src="${it.thumb}" alt="">
+      <div class="nm"><b>${esc(it.name)}</b>
+        <span>${it.w}×${it.h} · ${(it.bytes/1048576).toFixed(2)}MB · ${it.meta.container}${
+          it.fixed?' · <span style="color:var(--ok)">repaired</span>':''}</span></div>
+      <div class="sc ${r.score}">${tag}</div></div>`;
+  }).join('');
+  [...$('list').children].forEach(el=>el.onclick=()=>select(+el.dataset.i));
+}
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+function drawOriginal(it){
+  const p=it.proxy,cv=$('cvA');
+  cv.width=p.w;cv.height=p.h;
+  const x=cv.getContext('2d');
+  x.drawImage(p.canvas,0,0);
+  if(!$('cOverlay').checked)return;
+  const a=it.an;
+  // magenta wash over background pixels that are not exactly pure white
+  const img=x.getImageData(0,0,p.w,p.h),d=img.data,src=p.data.data;
+  for(let i=0;i<a.mask.length;i++){
+    if(!a.mask[i])continue;
+    const o=i*4;
+    if(dist2White(src[o],src[o+1],src[o+2])!==0){
+      d[o]=255;d[o+1]=53;d[o+2]=181;
+    }
+  }
+  x.putImageData(img,0,0);
+  // bounding box
+  if(a.box.found){
+    x.strokeStyle=a.cutAny?'#f4585e':'#4d9dff';
+    x.lineWidth=Math.max(1.5,p.w/380);x.setLineDash([7,5]);
+    x.strokeRect(a.box.x0*p.w,a.box.y0*p.h,(a.box.x1-a.box.x0)*p.w,(a.box.y1-a.box.y0)*p.h);
+    x.setLineDash([]);
+  }
+  // suspected overlay clusters
+  if(a.overlay.satEdge>Math.max(40,a.overlay.sat*0.1)){
+    x.fillStyle='rgba(245,183,49,.85)';
+    const s=Math.max(2,p.w/300);
+    for(const [bx,by] of a.overlay.blobs)x.fillRect(bx,by,s,s);
+  }
+}
+function drawFixed(it){
+  const cv=$('cvB');
+  if(!it.fixed){cv.width=cv.height=1;$('outMeta').textContent='';return}
+  const f=it.fixed,n=Math.min(900,f.canvas.width);
+  cv.width=n;cv.height=n;
+  cv.getContext('2d').drawImage(f.canvas,0,0,n,n);
+  $('outMeta').textContent=`${f.size}×${f.size} · ${(f.blob.size/1048576).toFixed(2)}MB`;
+}
+function renderChecks(it){
+  const ic={p:'✓',w:'!',f:'✕',i:'i'};
+  $('chks').innerHTML=it.rep.checks.map(([k,t])=>
+    `<div class="ck ${k}"><span class="ic">${ic[k]}</span><span>${t}</span></div>`).join('');
+}
+function renderMetrics(it){
+  const a=it.an,P=PRESETS[S.preset];
+  const cell=(k,v,c)=>`<div><div class="k">${k}</div><div class="v" ${
+    c?`style="color:${c}"`:''}>${v}</div></div>`;
+  const long=Math.max(it.w,it.h);
+  const rows=[
+    cell('Verdict',it.rep.score.toUpperCase(),
+      it.rep.score==='pass'?'var(--ok)':it.rep.score==='warn'?'var(--warn)':'var(--err)'),
+    cell('Longest edge',long+'px',long<P.minLong?'var(--err)':long<P.idealLong?'var(--warn)':'var(--ok)'),
+    cell('File size',(it.bytes/1048576).toFixed(2)+'MB',
+      P.capMB&&it.bytes/1048576>P.capMB?'var(--err)':'var(--ok)')
+  ];
+  if(P.pureWhite){
+    rows.push(cell('Border pure',a.border.purePct.toFixed(1)+'%',
+      a.border.purePct>=99.5?'var(--ok)':'var(--err)'));
+    rows.push(cell('BG impure',a.bg.impurePct.toFixed(1)+'%',
+      a.bg.impurePct<0.2?'var(--ok)':'var(--err)'));
+    rows.push(cell('Fill (edge)',a.fillLong.toFixed(1)+'%',
+      a.fillLong>=P.fill?'var(--ok)':'var(--err)'));
+    rows.push(cell('Fill (area)',a.fillArea.toFixed(1)+'%'));
+  }
+  rows.push(cell('Alpha',it.hasAlpha?'YES':'no',it.hasAlpha?'var(--err)':'var(--ok)'));
+  if(it.fixed)rows.push(cell('After: border',it.fixed.verify.borderPure.toFixed(1)+'%','var(--ok)'));
+  if(it.fixed)rows.push(cell('After: fill',it.fixed.verify.fillLong.toFixed(1)+'%','var(--ok)'));
+  $('mt').innerHTML=rows.join('');
+}
+function select(i){
+  if(i<0||i>=S.items.length){S.cur=-1;return}
+  S.cur=i;const it=S.items[i];
+  $('curName').textContent=it.name;
+  renderList();renderMetrics(it);renderChecks(it);drawOriginal(it);drawFixed(it);
+  $('fixMsg').textContent='';
+}
+function reaudit(){
+  const tol=+$('oTol').value,e=+$('oEdge').value;
+  for(const it of S.items){
+    it.an=analyze(it.proxy.data.data,it.proxy.w,it.proxy.h,tol,e);
+    it.rep=rules(it);
+  }
+  renderList();if(S.cur>=0)select(S.cur);
+}
+
+/* ═══════════ 7. ZIP writer (store method, hand-built) ═══════════ */
+const CRC=(()=>{const t=new Uint32Array(256);
+  for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}
+  return t})();
+function crc32(u8){let c=0xFFFFFFFF;
+  for(let i=0;i<u8.length;i++)c=CRC[(c^u8[i])&0xFF]^(c>>>8);
+  return (c^0xFFFFFFFF)>>>0}
+function dosTime(d){
+  return{t:((d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1))&0xFFFF,
+         d:(((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate())&0xFFFF}}
+function zip(entries){
+  const enc=new TextEncoder(),now=dosTime(new Date());
+  const parts=[],central=[];let off=0;
+  for(const e of entries){
+    const nm=enc.encode(e.name),body=e.data,c=crc32(body);
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0,true);
+    lh.setUint16(8,0,true);lh.setUint16(10,now.t,true);lh.setUint16(12,now.d,true);
+    lh.setUint32(14,c,true);lh.setUint32(18,body.length,true);lh.setUint32(22,body.length,true);
+    lh.setUint16(26,nm.length,true);lh.setUint16(28,0,true);
+    parts.push(new Uint8Array(lh.buffer),nm,body);
+    const cd=new DataView(new ArrayBuffer(46));
+    cd.setUint32(0,0x02014b50,true);cd.setUint16(4,20,true);cd.setUint16(6,20,true);
+    cd.setUint16(8,0,true);cd.setUint16(10,0,true);cd.setUint16(12,now.t,true);
+    cd.setUint16(14,now.d,true);cd.setUint32(16,c,true);
+    cd.setUint32(20,body.length,true);cd.setUint32(24,body.length,true);
+    cd.setUint16(28,nm.length,true);cd.setUint16(30,0,true);cd.setUint16(32,0,true);
+    cd.setUint16(34,0,true);cd.setUint16(36,0,true);cd.setUint32(38,0,true);
+    cd.setUint32(42,off,true);
+    central.push(new Uint8Array(cd.buffer),nm);
+    off+=30+nm.length+body.length;
+  }
+  const cdSize=central.reduce((s,a)=>s+a.length,0);
+  const eo=new DataView(new ArrayBuffer(22));
+  eo.setUint32(0,0x06054b50,true);eo.setUint16(4,0,true);eo.setUint16(6,0,true);
+  eo.setUint16(8,entries.length,true);eo.setUint16(10,entries.length,true);
+  eo.setUint32(12,cdSize,true);eo.setUint32(16,off,true);eo.setUint16(20,0,true);
+  return new Blob([...parts,...central,new Uint8Array(eo.buffer)],{type:'application/zip'});
+}
+function save(blob,name){
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},700);
+}
+
+/* ═══════════ 8. Naming ═══════════ */
+const VARIANTS=['MAIN','PT01','PT02','PT03','PT04','PT05','PT06','PT07','PT08'];
+function outName(it,idx){
+  const ext=$('oFmt').value==='image/png'?'png':'jpg';
+  const asin=($('xAsin').value||'').trim().replace(/[^A-Za-z0-9_-]/g,'');
+  const sch=$('xScheme').value;
+  if(sch==='orig'||!asin)return it.name.replace(/\.[^.]+$/,'')+'.'+ext;
+  if(sch==='seq')return `${asin}-${String(idx+1).padStart(2,'0')}.${ext}`;
+  return `${asin}.${VARIANTS[idx]||('PT'+String(idx).padStart(2,'0'))}.${ext}`;
+}
+
+/* ═══════════ 9. Licensing (offline) ═══════════
+   Ships with an ECDSA P-256 verifier for production keys signed by your
+   payment webhook; the short checksum scheme is the standalone demo path so
+   this file works on its own today. */
+const PUB={kty:'EC',crv:'P-256',x:'REPLACE_WITH_PUBLIC_X',y:'REPLACE_WITH_PUBLIC_Y',ext:true};
+const b64u=s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')
+  .padEnd(Math.ceil(s.length/4)*4,'=')),c=>c.charCodeAt(0));
+function fnv(s,seed){let h=seed>>>0;
+  for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0}return h>>>0}
+async function verifySigned(k){
+  const [p,sig]=k.split('.');if(!p||!sig)return null;
+  try{
+    const key=await crypto.subtle.importKey('jwk',PUB,{name:'ECDSA',namedCurve:'P-256'},false,['verify']);
+    const ok=await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},key,b64u(sig),
+      new TextEncoder().encode(p));
+    if(!ok)return null;
+    return{ok:true,claims:JSON.parse(new TextDecoder().decode(b64u(p)))};
+  }catch{return null}
+}
+function verifyDemo(k){
+  const m=k.trim().toUpperCase().match(/^PG-([A-Z0-9]{4})-([A-Z0-9]{4})-([A-Z0-9]{4})$/);
+  if(!m)return false;
+  const body=m[1]+m[2];
+  return (fnv(body,0x811c9dc5)%0x10000).toString(16).toUpperCase().padStart(4,'0')===m[3];
+}
+function demoKey(){const b='DEMO'+'PG01';
+  return `PG-${b.slice(0,4)}-${b.slice(4)}-${(fnv(b,0x811c9dc5)%0x10000).toString(16).toUpperCase().padStart(4,'0')}`}
+async function activate(k){
+  const s=await verifySigned(k);
+  if(s&&s.ok)return{ok:true,msg:`✓ Licensed to ${s.claims.sub||'you'} — unlimited repairs.`};
+  if(verifyDemo(k))return{ok:true,msg:'✓ Demo licence active — unlimited repairs unlocked locally.'};
+  return{ok:false,msg:'✕ Key not recognised. Format: PG-XXXX-XXXX-XXXX'};
+}
+const quota=()=>S.licensed?Infinity:S.FREE;
+const usedFixes=()=>S.items.filter(i=>i.fixed).length;
+
+/* ═══════════ 10. Wiring ═══════════ */
+const dz=$('dz');
+dz.onclick=()=>$('fi').click();
+['dragenter','dragover'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.add('hot')}));
+['dragleave','drop'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.remove('hot')}));
+dz.addEventListener('drop',ev=>{if(ev.dataTransfer.files.length)ingest(ev.dataTransfer.files)});
+$('fi').onchange=e=>{if(e.target.files.length)ingest(e.target.files)};
+
+[...document.querySelectorAll('.tab')].forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');S.preset=t.dataset.p;
+  const P=PRESETS[S.preset];
+  $('oSize').value=String(P.size);$('oCap').value=String(P.capMB);
+  reaudit();
+});
+$('oTol').oninput=()=>{$('tolLbl').textContent=$('oTol').value};
+$('oEdge').oninput=()=>{$('edgLbl').textContent=$('oEdge').value};
+$('oFill').oninput=()=>{$('fillLbl').textContent=$('oFill').value};
+['oTol','oEdge'].forEach(id=>$(id).onchange=reaudit);
+$('oFill').onchange=()=>{if(S.cur>=0)renderChecks(S.items[S.cur])};
+$('cOverlay').onchange=()=>{if(S.cur>=0)drawOriginal(S.items[S.cur])};
+$('bReaudit').onclick=reaudit;
+
+$('bFix').onclick=async()=>{
+  if(S.cur<0)return;
+  const it=S.items[S.cur];
+  if(!it.fixed&&usedFixes()>=quota()){
+    $('fixMsg').innerHTML=`<span style="color:var(--warn)">Free tier repairs ${S.FREE} images — activate a licence below.</span>`;return}
+  $('fixMsg').textContent='Repairing…';
+  it.fixed=await repair(it);
+  drawFixed(it);renderMetrics(it);renderList();
+  const v=it.fixed.verify;
+  $('fixMsg').innerHTML=`<span style="color:var(--ok)">✓ border now ${v.borderPure.toFixed(1)}% pure white · fill ${v.fillLong.toFixed(1)}%</span>`;
+};
+$('bFixAll').onclick=async()=>{
+  let n=0;
+  for(let i=0;i<S.items.length;i++){
+    if(usedFixes()>=quota())break;
+    if(S.items[i].fixed)continue;
+    S.items[i].fixed=await repair(S.items[i]);n++;
+    $('pw').classList.remove('hid');$('pb').style.width=((i+1)/S.items.length*100)+'%';
+  }
+  setTimeout(()=>$('pw').classList.add('hid'),400);
+  renderList();if(S.cur>=0){drawFixed(S.items[S.cur]);renderMetrics(S.items[S.cur])}
+  $('xMsg').innerHTML=`Repaired ${n} image(s).`+(usedFixes()>=quota()&&!S.licensed
+    ?` <span style="color:var(--warn)">Free cap of ${S.FREE} reached.</span>`:'');
+};
+$('bDl').onclick=()=>{
+  if(S.cur<0)return;const it=S.items[S.cur];
+  if(!it.fixed)return alert('Repair the image first.');
+  save(it.fixed.blob,outName(it,S.cur));
+};
+$('bZip').onclick=async()=>{
+  const want=$('xWhich').value;
+  const pool=S.items.filter(i=>i.fixed||(want==='passing'&&i.rep.score==='pass'));
+  if(!pool.length)return alert('Nothing to export yet — repair at least one image.');
+  const entries=[];
+  for(let i=0;i<pool.length;i++){
+    const it=pool[i];
+    const blob=it.fixed?it.fixed.blob:it.file;
+    entries.push({name:outName(it,i),data:new Uint8Array(await blob.arrayBuffer())});
+  }
+  entries.push({name:'pixelgate-report.csv',
+    data:new TextEncoder().encode(csv())});
+  save(zip(entries),`pixelgate-${PRESETS[S.preset].size}-${Date.now()}.zip`);
+  $('xMsg').innerHTML=`<span style="color:var(--ok)">✓ ${entries.length-1} image(s) packed.</span>`;
+};
+function csv(){
+  const q=s=>/[",\n]/.test(String(s))?'"'+String(s).replace(/"/g,'""')+'"':String(s);
+  const L=[['file','width','height','mb','container','verdict','fails','warnings',
+    'border_pure_pct','bg_impure_pct','fill_longest_pct','fill_area_pct','alpha',
+    'cut_off','repaired','issues'].join(',')];
+  for(const it of S.items){
+    const a=it.an;
+    L.push([q(it.name),it.w,it.h,(it.bytes/1048576).toFixed(3),it.meta.container,
+      it.rep.score,it.rep.fails,it.rep.warns,a.border.purePct.toFixed(2),
+      a.bg.impurePct.toFixed(2),a.fillLong.toFixed(2),a.fillArea.toFixed(2),
+      it.hasAlpha?'yes':'no',a.cutAny?'yes':'no',it.fixed?'yes':'no',
+      q(it.rep.checks.filter(c=>c[0]==='f').map(c=>c[1].replace(/<[^>]+>/g,'')).join(' | '))
+    ].join(','));
+  }
+  return L.join('\r\n')+'\r\n';
+}
+$('bCsv').onclick=()=>{
+  if(!S.items.length)return;
+  save(new Blob([csv()],{type:'text/csv'}),'pixelgate-audit.csv');
+};
+$('bClear').onclick=()=>{
+  S.items=[];S.cur=-1;$('stage').classList.add('hid');$('li').textContent='';$('fi').value='';
+};
+$('bDemoKey').onclick=()=>{$('lk').value=demoKey()};
+$('bLic').onclick=async()=>{
+  const r=await activate($('lk').value);
+  $('lm').textContent=r.msg;$('lm').style.color=r.ok?'var(--ok)':'var(--err)';
+  if(r.ok){S.licensed=true;$('licB').textContent='✓ Licensed · unlimited';
+    $('licB').classList.add('g');try{localStorage.setItem('pg.key',$('lk').value)}catch{}}
+};
+(async()=>{let k=null;try{k=localStorage.getItem('pg.key')}catch{}
+  if(k){$('lk').value=k;const r=await activate(k);if(r.ok){S.licensed=true;
+    $('licB').textContent='✓ Licensed · unlimited';$('licB').classList.add('g');
+    $('lm').textContent=r.msg;$('lm').style.color='var(--ok)'}}})();
+
+/* ═══════════ 11. Procedural test image ═══════════
+   Deliberately built to trip six rules at once: off-white gradient background
+   (247–252, not 255), product occupying ~46% of the frame, a saturated "SALE"
+   badge in the corner, a decorative border stroke, non-square aspect, and a
+   sub-1000px longest edge. No file needed to see the tool work.             */
+$('bDemo').onclick=async()=>{
+  const W=900,H=760;
+  const c=document.createElement('canvas');c.width=W;c.height=H;
+  const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,W,H);
+  g.addColorStop(0,'rgb(252,252,250)');g.addColorStop(.55,'rgb(248,249,247)');
+  g.addColorStop(1,'rgb(243,245,244)');
+  x.fillStyle=g;x.fillRect(0,0,W,H);
+  // decorative border (disallowed)
+  x.strokeStyle='rgb(205,210,215)';x.lineWidth=6;x.strokeRect(3,3,W-6,H-6);
+  // product: a mug, small in frame
+  const cx0=W/2,cy0=H/2;
+  x.save();x.translate(cx0,cy0);
+  x.fillStyle='rgba(40,50,65,.16)';
+  x.beginPath();x.ellipse(6,116,116,20,0,0,7);x.fill();      // contact shadow
+  const bg=x.createLinearGradient(-100,0,100,0);
+  bg.addColorStop(0,'#1d5f8f');bg.addColorStop(.42,'#3fa3d8');bg.addColorStop(1,'#12466b');
+  x.fillStyle=bg;
+  x.beginPath();x.moveTo(-96,-108);x.lineTo(96,-108);
+  x.lineTo(80,108);x.quadraticCurveTo(0,132,-80,108);x.closePath();x.fill();
+  x.strokeStyle='#0e3b5a';x.lineWidth=9;
+  x.beginPath();x.ellipse(126,-6,46,58,0,-1.35,1.35);x.stroke();   // handle
+  x.fillStyle='#cfe9f8';
+  x.beginPath();x.ellipse(0,-108,96,24,0,0,7);x.fill();            // rim
+  x.fillStyle='rgba(255,255,255,.28)';
+  x.beginPath();x.moveTo(-62,-88);x.lineTo(-38,-88);x.lineTo(-50,96);x.lineTo(-72,88);
+  x.closePath();x.fill();
+  x.restore();
+  // saturated promo badge (immediate suppression)
+  x.fillStyle='#e02020';x.beginPath();x.arc(112,104,66,0,7);x.fill();
+  x.fillStyle='#fff';x.font='bold 34px sans-serif';x.textAlign='center';
+  x.fillText('SALE',112,98);x.font='bold 19px sans-serif';x.fillText('50% OFF',112,124);
+  x.fillStyle='#f5b731';x.font='bold 26px sans-serif';x.textAlign='left';
+  x.fillText('★★★★★  BEST SELLER',26,H-30);
+  const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));
+  const f=new File([blob],'test-mug-noncompliant.jpg',{type:'image/jpeg'});
+  ingest([f]);
+};
+</script>
+</body>
+</html>

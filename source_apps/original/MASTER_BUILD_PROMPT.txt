@@ -1,0 +1,122 @@
+MASTER BUILD PROMPT — D'S PROFESSIONAL AI PRODUCT PORTFOLIO
+
+ROLE
+You are taking full ownership of this project as a senior full-stack engineer, senior front-end engineer, senior UI/UX product designer, SaaS product strategist, technical QA engineer, accessibility specialist, conversion-focused web designer, portfolio architect, and deployment engineer.
+
+This is NOT a mockup exercise. Do not merely plan, describe, audit, or give recommendations. BUILD, REPAIR, TEST, POLISH, AND DELIVER the complete working portfolio.
+
+PRIMARY OBJECTIVE
+Create a premium professional portfolio/product lab for "D". Publicly identify the owner only as D. Do not use or invent a full legal name.
+
+The portfolio must be credible enough to send to business owners, prospective clients, collaborators, employers, investors, and other professional contacts. It must position D as someone who uses AI, software, design, automation, and product thinking to solve real business problems.
+
+The portfolio must NOT feel like a beginner coding portfolio, school assignment, random collection of HTML files, generic AI template, unfinished prototype gallery, or developer resume. It SHOULD feel like a serious independent AI product studio/product lab containing useful products and prototypes with commercial potential.
+
+A visitor should quickly understand: D builds useful products; the products address real problems; the demos are worth exploring; several products have credible monetization paths; and D can potentially help solve a visitor's own business problem.
+
+TRUTHFULNESS
+Do not fabricate customers, revenue, testimonials, reviews, app-store ratings, user counts, launch dates, partnerships, awards, sales metrics, client logos, download statistics, or case studies. Do not promise income. Use professional language around business value, target customer, problem solved, monetization model, product opportunity, SaaS potential, productized-service potential, licensing potential, workflow efficiency, cost-saving potential, and revenue-supporting use cases.
+
+SOURCE-OF-TRUTH RULE
+The actual source files in /source_apps are authoritative. Read every file completely. Inspect the HTML, CSS, JavaScript, forms, calculations, navigation, buttons, modals, interactions, local storage, data structures, demo data, UI states, business logic, responsive behavior, external dependencies, comments, links, assets, and error handling. Determine which external CSS/JS files belong to which app from the code. Do not guess from filenames. Do not invent major completed functionality that is not present in the code.
+
+CURRENT SOURCE SET
+- sowguard.html
+- iron redact.html
+- pixel gate.html
+- profitpreflight(1).html
+- quote fast.html
+- bidlens.html
+- blackbar.html
+- ledgerfold.html
+- nudgeledger.html
+- sitepulse.html
+- script(1).js
+- styles (4)(1).css
+
+AUDIT EACH APP BEFORE INTEGRATION
+For each app, determine: what it actually does; the business problem it solves; realistic users; strongest feature; current completion state; what works; what is broken; missing assets; JavaScript errors; broken buttons/navigation/forms; layout and responsive issues; console errors; missing references; browser compatibility issues; controls that look interactive but do nothing; backend/API/service dependencies; and the repairs needed for a professional portfolio demo.
+
+REPAIR THE APPS
+Do not embed broken apps. Repair broken JavaScript, paths, styles, layouts, forms, calculations, navigation, buttons, modals, filters, tabs, dropdowns, local demo workflows, and responsive behavior where reasonably possible. Eliminate preventable console errors and obvious dead interactions. Preserve each app's purpose and useful existing functionality. Do not redesign a working app merely to impose a personal aesthetic.
+
+If a feature genuinely requires a missing API, database, authentication system, payment provider, server, or third-party service, do not fake a live integration. Create the strongest honest portfolio-safe demo experience possible using demo data, local simulation, clearly labeled demo mode, graceful fallbacks, or informative states. A visitor should never click into a visibly broken experience.
+
+PORTFOLIO ARCHITECTURE
+Do not force everything into a single HTML file unless that is genuinely the best architecture. Choose a clean, maintainable project structure. The current apps are only the beginning. D has additional projects under development and on GitHub that will be added later. Architect the portfolio so future apps can be added without rebuilding the entire site. Prefer reusable project data/components/configuration where appropriate.
+
+PRODUCT POSITIONING
+Develop a premium umbrella position based on the real products, along the lines of practical AI-powered products that solve expensive, repetitive, confusing, or time-consuming business problems. Improve the exact wording based on the actual code. Keep the positioning broad enough to support future GitHub projects.
+
+Do not create duplicate product listings. Pay special attention to overlapping concepts. For example, inspect IronRedact and BlackBar separately and position them based on actual differences in the code. If appropriate, one may be a fuller privacy/document workflow and the other a lightweight focused companion, but the code is the authority.
+
+DESIGN STANDARD
+The design must feel like a premium SaaS/product studio: strong typography, excellent hierarchy, thoughtful spacing, polished interaction states, restrained high-quality motion, clear product presentation, professional responsive behavior, and a coherent system. Avoid cliché AI visuals, random gradients, neon everywhere, excessive glassmorphism, floating blobs, meaningless animations, fake robot imagery, clutter, and badge overload. Premium means disciplined.
+
+HOMEPAGE
+Create a strong hero that immediately communicates what D builds, who it helps, and why it matters. Use real, non-generic copy. Include a clear CTA such as Explore Products, View Products, or Work With D.
+
+Feature the strongest products first based on the source audit. Create a complete product library with working filters/categories that actually fit the apps. Possible categories may include Business, Contractor Tools, Documents, Privacy, Finance, Sales, Operations, AI, Marketing, Utilities, or others justified by the code.
+
+Each product card should communicate the product name, concise value proposition, main problem solved, target audience, category/status where useful, credible monetization path, and a real working action to open the demo. Do not overcrowd cards.
+
+Create a tasteful section showing realistic business models such as SaaS subscription, productized service, licensing, client-specific deployment, lead generation, internal tool, one-time purchase, or freemium upgrade—but only where they reasonably fit the product.
+
+Create a professional Work With D section aimed at people with an expensive, repetitive, or frustrating workflow they want turned into software. Do not use fake forms or dead CTAs.
+
+APP LAUNCH EXPERIENCE
+Every app must be openable from the portfolio. No href="#" placeholders. No fake Open App buttons. No nonexistent routes. No hiding broken apps behind beautiful cards. Provide an obvious path back to the portfolio where appropriate without damaging the app's original design.
+
+BROWSER TESTING IS MANDATORY
+Use browser/computer/testing capabilities. Run the project; do not assume it works from source inspection alone. Test homepage navigation, filters, every project card, every app launch, major buttons, forms, tabs, modals, calculations, menus, mobile navigation, return navigation, internal links, keyboard navigation where practical, reload behavior, and the browser console.
+
+Test at approximately 375px mobile, 768px tablet, and 1440px desktop. Check for horizontal scrolling, clipped or overlapping content, unreadable type, broken controls, missing assets, 404s, JavaScript exceptions, dead buttons, malformed URLs, and broken routes.
+
+QA LOOP
+Use an iterative loop: BUILD -> OPEN -> TEST -> FIND PROBLEMS -> FIX -> RETEST -> POLISH -> RETEST. Repeat until the result is professional, functional, polished, trustworthy, extensible, and deployable.
+
+ACCESSIBILITY / PROFESSIONAL BASICS
+Use semantic HTML, appropriate form labels, keyboard-accessible controls, visible focus states, reasonable contrast, descriptive titles, useful metadata, social metadata where appropriate, clean paths, responsive images, alt text where meaningful, and reduced-motion consideration where appropriate.
+
+PERFORMANCE
+Keep the project reasonably light. Optimize scripts, images, fonts, and animations. Do not install a large framework merely to display static apps unless it materially improves maintainability or reliability.
+
+FUTURE GITHUB SUPPORT
+Do not guess future GitHub projects. Prepare the architecture so they can be added later through a clean project data/content structure. Leave the code organized and documented so another senior developer or AI coding agent can extend it without re-architecting the site.
+
+FINAL DELIVERABLE
+Deliver the entire working project, not snippets. Include the complete portfolio source, repaired app copies, CSS, JavaScript, assets, configuration, a clear directory map, README, simple local-open instructions, test instructions, deployment instructions, a concise repair log for each supplied app, and a QA report stating what was actually tested and any honest remaining limitations.
+
+DEFINITION OF DONE
+Do not call the project finished until all of the following pass:
+[ ] Every supplied source file was inspected.
+[ ] Every distinct app appears in the portfolio exactly once.
+[ ] Portfolio navigation works.
+[ ] Product filters work.
+[ ] Every app link works.
+[ ] Every app loads successfully.
+[ ] Major interactive controls were tested.
+[ ] Broken HTML/CSS/JS discovered during testing was repaired where possible.
+[ ] No obvious preventable console errors remain.
+[ ] No intentional dead buttons or fake links remain.
+[ ] Mobile layout was tested.
+[ ] Tablet layout was tested.
+[ ] Desktop layout was tested.
+[ ] The portfolio looks professionally designed.
+[ ] Product descriptions are based on actual source code.
+[ ] Monetization language is realistic and not fabricated.
+[ ] Architecture is ready for additional projects later.
+[ ] The complete project can be opened and demonstrated.
+[ ] Deployment instructions are included.
+[ ] A final end-to-end browser QA pass was completed.
+
+FINAL VISITOR TEST
+Before finishing, simulate receiving this URL as a company CEO. Start on the homepage, read the positioning, browse/filter the products, open every application, click through important functionality, return to the portfolio, try mobile, and look for anything embarrassing, confusing, broken, amateur-looking, misleading, or unfinished. Fix those issues before declaring completion.
+
+WORKING STYLE
+Take ownership. Do not repeatedly stop to ask D minor implementation questions that a senior professional can resolve independently. Make sensible decisions based on the code, usability, reliability, business positioning, and professional design standards. Use all available relevant browser, computer, coding, debugging, testing, and design capabilities. Do not rush. Do not stop because the homepage looks attractive. Continue until the Definition of Done is satisfied or a genuine external limitation is documented clearly.
+
+STANDARD
+The standard is: "I can send this URL to anyone tomorrow morning without apologizing for anything."
+
+BEGIN NOW by reading every source file completely, then audit, repair, build, integrate, test, polish, and deliver.

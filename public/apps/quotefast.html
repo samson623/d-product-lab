@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuoteFast — 60-Second Estimates & Invoices</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
+    --txt:#e8eaf0; --dim:#8b93a3; --accent:#4ade80; --accent2:#22c55e;
+    --warn:#f59e0b; --danger:#ef4444; --radius:12px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;
+    background:var(--bg); color:var(--txt); min-height:100vh; padding-bottom:60px;
+  }
+  .wrap{max-width:1100px; margin:0 auto; padding:20px 16px;}
+  header.app{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:14px 0 22px; flex-wrap:wrap;
+  }
+  .logo{font-size:22px; font-weight:800; letter-spacing:-0.5px;}
+  .logo span{color:var(--accent);}
+  .tag{color:var(--dim); font-size:13px;}
+  .badge{
+    font-size:11px; font-weight:700; padding:4px 10px; border-radius:99px;
+    background:#3a2b12; color:var(--warn); border:1px solid #6b4c1a;
+  }
+  .badge.pro{background:#10331c; color:var(--accent); border-color:#1f7a3f;}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+  @media(max-width:880px){.grid{grid-template-columns:1fr;}}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:20px;
+  }
+  .card h2{
+    font-size:12px; text-transform:uppercase; letter-spacing:1.2px;
+    color:var(--dim); margin-bottom:14px; display:flex; justify-content:space-between;
+  }
+  label{display:block; font-size:12px; color:var(--dim); margin:10px 0 4px;}
+  input,select,textarea{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--txt);
+    border-radius:8px; padding:9px 11px; font-size:14px; font-family:inherit;
+  }
+  input:focus,select:focus,textarea:focus{outline:none; border-color:var(--accent2);}
+  textarea{resize:vertical; min-height:60px;}
+  .row{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .row3{display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:8px; align-items:end;}
+  button{
+    cursor:pointer; border:none; border-radius:8px; font-weight:600; font-size:14px;
+    padding:10px 16px; transition:transform .05s, opacity .15s;
+  }
+  button:active{transform:scale(.97);}
+  .btn-accent{background:var(--accent2); color:#04160a; width:100%; padding:13px; font-size:15px;}
+  .btn-accent:hover{background:var(--accent);}
+  .btn-ghost{background:var(--panel2); color:var(--txt); border:1px solid var(--line);}
+  .btn-ghost:hover{border-color:var(--accent2);}
+  .btn-mini{background:transparent; color:var(--danger); border:1px solid var(--line); padding:8px 10px;}
+  .item-row{display:grid; grid-template-columns:2fr 90px 110px 36px; gap:8px; margin-bottom:8px;}
+  .item-row input{padding:8px 10px; font-size:13px;}
+  .totals{margin-top:14px; border-top:1px dashed var(--line); padding-top:12px;}
+  .tline{display:flex; justify-content:space-between; font-size:14px; padding:3px 0; color:var(--dim);}
+  .tline.grand{color:var(--txt); font-size:19px; font-weight:800; padding-top:8px;}
+  .tline.grand span:last-child{color:var(--accent);}
+  .toolbar{display:flex; gap:10px; margin-top:18px; flex-wrap:wrap;}
+  .toolbar button{flex:1; min-width:120px;}
+  /* ------- document preview (the "paper") ------- */
+  .paper-scroll{overflow-x:auto;}
+  .paper{
+    background:#fff; color:#111; border-radius:6px; padding:34px 36px;
+    min-width:520px; font-size:13px; line-height:1.5; position:relative;
+    box-shadow:0 6px 30px rgba(0,0,0,.45);
+  }
+  .p-head{display:flex; justify-content:space-between; margin-bottom:22px;}
+  .p-biz{font-size:17px; font-weight:800;}
+  .p-meta{font-size:12px; color:#555;}
+  .p-doctype{font-size:26px; font-weight:800; letter-spacing:2px; color:#333; text-align:right;}
+  .p-status{display:inline-block; font-size:10px; font-weight:700; padding:2px 9px; border-radius:99px; margin-top:4px;}
+  .st-quote{background:#e0e7ff; color:#3730a3;}
+  .st-invoice{background:#fee2e2; color:#991b1b;}
+  .st-paid{background:#dcfce7; color:#166534;}
+  .p-cols{display:flex; justify-content:space-between; gap:20px; margin-bottom:18px;}
+  .p-cols b{font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#888; display:block; margin-bottom:3px;}
+  table.p-items{width:100%; border-collapse:collapse; margin:10px 0 14px;}
+  table.p-items th{
+    text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:1px;
+    color:#888; border-bottom:2px solid #111; padding:5px 4px;
+  }
+  table.p-items th.r, table.p-items td.r{text-align:right;}
+  table.p-items td{padding:7px 4px; border-bottom:1px solid #eee;}
+  .p-tot{margin-left:auto; width:230px;}
+  .p-tot div{display:flex; justify-content:space-between; padding:3px 0; color:#444;}
+  .p-tot .big{border-top:2px solid #111; margin-top:5px; padding-top:7px; font-weight:800; font-size:16px; color:#111;}
+  .p-notes{margin-top:18px; font-size:12px; color:#555; white-space:pre-wrap;}
+  .p-foot{margin-top:26px; padding-top:12px; border-top:1px solid #eee; font-size:10px; color:#999; text-align:center;}
+  /* watermark */
+  .wm{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    pointer-events:none; overflow:hidden; border-radius:6px;
+  }
+  .wm span{
+    transform:rotate(-24deg); font-size:42px; font-weight:900; letter-spacing:4px;
+    color:rgba(180,40,40,.14); white-space:nowrap;
+  }
+  /* license modal */
+  .modal-bg{
+    position:fixed; inset:0; background:rgba(0,0,0,.7); display:none;
+    align-items:center; justify-content:center; z-index:50; padding:16px;
+  }
+  .modal-bg.open{display:flex;}
+  .modal{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:26px; max-width:400px; width:100%;}
+  .modal h3{margin-bottom:8px;}
+  .modal p{font-size:13px; color:var(--dim); margin-bottom:14px; line-height:1.6;}
+  .modal .price{font-size:26px; font-weight:800; color:var(--accent); margin:6px 0 14px;}
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(80px);
+    background:var(--panel2); border:1px solid var(--accent2); color:var(--txt);
+    padding:11px 20px; border-radius:99px; font-size:13px; opacity:0; transition:all .3s; z-index:60;
+  }
+  .toast.show{transform:translateX(-50%) translateY(0); opacity:1;}
+  kbd{background:var(--panel2); border:1px solid var(--line); border-radius:4px; padding:1px 5px; font-size:11px;}
+  @media print{
+    body{background:#fff; padding:0;}
+    header.app,.grid>.card:first-child,.toolbar,.toast,.modal-bg{display:none !important;}
+    .grid{display:block;}
+    .card{border:none; padding:0; background:none;}
+    .paper-scroll{overflow:visible;}
+    .paper{box-shadow:none; border-radius:0; padding:0; min-width:0;}
+    .wm span{color:rgba(180,40,40,.18);}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="app">
+    <div>
+      <div class="logo">Quote<span>Fast</span> ⚡</div>
+      <div class="tag">Professional estimates & invoices in 60 seconds. No signup. Your data never leaves this device.</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span id="licBadge" class="badge">FREE — watermark on PDF</span>
+      <button class="btn-ghost" style="padding:7px 13px;font-size:12px;" onclick="openModal()">Go Pro — $9</button>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- ==================== EDITOR ==================== -->
+    <div class="card">
+      <h2>Document Details <span id="autosave" style="font-size:10px;color:var(--accent);"></span></h2>
+
+      <div class="row">
+        <div>
+          <label>Document type</label>
+          <select id="docType">
+            <option value="QUOTE">Quote / Estimate</option>
+            <option value="INVOICE">Invoice</option>
+            <option value="RECEIPT">Receipt</option>
+          </select>
+        </div>
+        <div>
+          <label>Status</label>
+          <select id="docStatus">
+            <option value="open">Open</option>
+            <option value="paid">Paid</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div><label>Doc number</label><input id="docNum"></div>
+        <div><label>Date</label><input id="docDate" type="date"></div>
+      </div>
+
+      <h2 style="margin-top:22px;">Your Business <span style="font-size:10px;">(remembered forever)</span></h2>
+      <input id="bizName" placeholder="Business name — e.g. Dave's Plumbing LLC">
+      <input id="bizMeta" placeholder="Phone · Email · License # · Address" style="margin-top:8px;">
+
+      <h2 style="margin-top:22px;">Client</h2>
+      <input id="cliName" placeholder="Client name" list="clientList" oninput="maybeFillClient()">
+      <datalist id="clientList"></datalist>
+      <input id="cliMeta" placeholder="Client address / contact / job site" style="margin-top:8px;">
+
+      <h2 style="margin-top:22px;">Line Items</h2>
+      <div id="items"></div>
+      <button class="btn-ghost" style="width:100%;margin-top:4px;" onclick="addItem()">+ Add line item</button>
+
+      <div class="row" style="margin-top:14px;">
+        <div><label>Tax %</label><input id="taxRate" type="number" min="0" step="0.1" value="0"></div>
+        <div><label>Discount ($)</label><input id="discount" type="number" min="0" step="0.01" value="0"></div>
+      </div>
+
+      <label>Notes / terms</label>
+      <textarea id="notes">Estimate valid for 30 days. 50% deposit to schedule. Balance due on completion.</textarea>
+
+      <div class="totals">
+        <div class="tline"><span>Subtotal</span><span id="tSub">$0.00</span></div>
+        <div class="tline"><span>Discount</span><span id="tDisc">−$0.00</span></div>
+        <div class="tline"><span>Tax</span><span id="tTax">$0.00</span></div>
+        <div class="tline grand"><span>Total</span><span id="tTot">$0.00</span></div>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn-accent" onclick="window.print()">⬇ Download / Print PDF</button>
+        <button class="btn-ghost" onclick="copyText()">📋 Copy as text</button>
+        <button class="btn-ghost" onclick="newDoc()">＋ New doc</button>
+      </div>
+      <p style="font-size:11px;color:var(--dim);margin-top:12px;">
+        💡 Tip: use your browser's <b>Print → Save as PDF</b> for a perfect PDF. Press <kbd>Ctrl</kbd>+<kbd>P</kbd>.
+      </p>
+    </div>
+
+    <!-- ==================== LIVE PREVIEW ==================== -->
+    <div class="card">
+      <h2>Live Preview</h2>
+      <div class="paper-scroll">
+        <div class="paper" id="paper">
+          <div class="p-head">
+            <div>
+              <div class="p-biz" id="vBiz">Your Business</div>
+              <div class="p-meta" id="vBizMeta">phone · email · address</div>
+            </div>
+            <div>
+              <div class="p-doctype" id="vType">QUOTE</div>
+              <div style="text-align:right;"><span class="p-status st-quote" id="vStatus">OPEN</span></div>
+              <div class="p-meta" style="text-align:right;margin-top:6px;">
+                <span id="vNum">#0001</span><br><span id="vDate"></span>
+              </div>
+            </div>
+          </div>
+          <div class="p-cols">
+            <div><b>Prepared for</b><span id="vCli">Client name</span><br><span class="p-meta" id="vCliMeta"></span></div>
+          </div>
+          <table class="p-items">
+            <thead><tr><th>Description</th><th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount</th></tr></thead>
+            <tbody id="vItems"></tbody>
+          </table>
+          <div class="p-tot">
+            <div><span>Subtotal</span><span id="vSub">$0.00</span></div>
+            <div id="vDiscRow"><span>Discount</span><span id="vDisc">−$0.00</span></div>
+            <div id="vTaxRow"><span>Tax</span><span id="vTax">$0.00</span></div>
+            <div class="big"><span>Total</span><span id="vTot">$0.00</span></div>
+          </div>
+          <div class="p-notes" id="vNotes"></div>
+          <div class="p-foot" id="vFoot"></div>
+          <div class="wm" id="watermark"><span>QUOTEFAST · FREE VERSION</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- license modal -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3>⚡ QuoteFast Pro</h3>
+    <p>One payment. Yours forever. Removes the watermark, removes the footer, supports an indie dev.</p>
+    <div class="price">$9 <span style="font-size:13px;color:var(--dim);font-weight:400;">one-time</span></div>
+    <p>① Buy a license at <b id="storeLink">gumroad.com/l/quotefast</b><br>② Paste your license key below:</p>
+    <input id="licKey" placeholder="XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX" style="font-family:monospace;">
+    <button class="btn-accent" style="margin-top:12px;" onclick="activate()">Activate Pro</button>
+    <button class="btn-ghost" style="width:100%;margin-top:8px;" onclick="closeModal()">Maybe later</button>
+    <p id="licMsg" style="margin-top:10px;font-size:12px;"></p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==================================================================
+   QuoteFast — single-file invoicing/estimating app
+   Data model in localStorage. No server, no tracking, works offline.
+   ================================================================== */
+const $ = id => document.getElementById(id);
+const fmt = n => '$' + (Math.round(n*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const LS = { get:(k,d)=>{try{const v=localStorage.getItem('qf_'+k);return v?JSON.parse(v):d;}catch(e){return d;}},
+             set:(k,v)=>{try{localStorage.setItem('qf_'+k,JSON.stringify(v));}catch(e){}} };
+
+let items = LS.get('items', [{d:'',q:1,r:0}]);
+let pro   = LS.get('pro', false);
+let licKey= LS.get('lic','');
+
+/* ---------- init ---------- */
+(function init(){
+  $('docNum').value  = LS.get('docNum','') || nextNum();
+  $('docDate').value = LS.get('docDate', new Date().toISOString().slice(0,10));
+  ['docType','docStatus','bizName','bizMeta','cliName','cliMeta','taxRate','discount','notes']
+    .forEach(id=>{ $(id).value = LS.get(id, $(id).value); });
+  renderItems(); refresh(); refreshClients(); applyLicenseUI();
+  document.querySelectorAll('input,select,textarea').forEach(el=>{
+    el.addEventListener('input', ()=>{ persist(); refresh(); });
+  });
+})();
+
+function nextNum(){
+  const n = LS.get('counter', 1);
+  return String(n).padStart(4,'0');
+}
+
+function persist(){
+  ['docType','docStatus','docNum','docDate','bizName','bizMeta','cliName','cliMeta','taxRate','discount','notes']
+    .forEach(id=>LS.set(id,$(id).value));
+  LS.set('items', items);
+  $('autosave').textContent = '✓ autosaved ' + new Date().toLocaleTimeString();
+}
+
+/* ---------- line items ---------- */
+function renderItems(){
+  $('items').innerHTML = '';
+  items.forEach((it,i)=>{
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML =
+      `<input placeholder="Description — e.g. Replace water heater" value="${esc(it.d)}" oninput="items[${i}].d=this.value;persist();refresh()">
+       <input type="number" min="0" step="any" placeholder="Qty" value="${it.q}" oninput="items[${i}].q=+this.value||0;persist();refresh()">
+       <input type="number" min="0" step="any" placeholder="Rate" value="${it.r}" oninput="items[${i}].r=+this.value||0;persist();refresh()">
+       <button class="btn-mini" title="Remove" onclick="items.splice(${i},1);renderItems();persist();refresh()">✕</button>`;
+    $('items').appendChild(row);
+  });
+}
+function addItem(){ items.push({d:'',q:1,r:0}); renderItems(); persist(); refresh(); }
+function esc(s){ return String(s).replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+/* ---------- client memory ---------- */
+function rememberClient(){
+  const name = $('cliName').value.trim();
+  if(!name) return;
+  const clients = LS.get('clients',{});
+  clients[name] = $('cliMeta').value;
+  LS.set('clients', clients);
+  refreshClients();
+}
+function refreshClients(){
+  const clients = LS.get('clients',{});
+  $('clientList').innerHTML = Object.keys(clients).map(n=>`<option value="${esc(n)}">`).join('');
+}
+function maybeFillClient(){
+  const clients = LS.get('clients',{});
+  const v = $('cliName').value.trim();
+  if(clients[v] !== undefined) $('cliMeta').value = clients[v];
+}
+
+/* ---------- totals + preview ---------- */
+function totals(){
+  const sub  = items.reduce((s,it)=>s + (it.q||0)*(it.r||0), 0);
+  const disc = Math.min(+$('discount').value||0, sub);
+  const tax  = (sub-disc) * ((+$('taxRate').value||0)/100);
+  return {sub, disc, tax, tot: sub - disc + tax};
+}
+
+function refresh(){
+  const t = totals();
+  const type = $('docType').value;
+  const status = $('docStatus').value;
+
+  $('tSub').textContent = fmt(t.sub);
+  $('tDisc').textContent = '−'+fmt(t.disc);
+  $('tTax').textContent = fmt(t.tax);
+  $('tTot').textContent = fmt(t.tot);
+
+  $('vBiz').textContent  = $('bizName').value || 'Your Business';
+  $('vBizMeta').textContent = $('bizMeta').value || '';
+  $('vCli').textContent  = $('cliName').value || 'Client name';
+  $('vCliMeta').textContent = $('cliMeta').value || '';
+  $('vType').textContent = type;
+  $('vNum').textContent  = '#'+$('docNum').value;
+  $('vDate').textContent = new Date($('docDate').value+'T12:00').toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+
+  const st = $('vStatus');
+  if(status==='paid'){ st.textContent='PAID'; st.className='p-status st-paid'; }
+  else { st.textContent = type==='QUOTE'?'OPEN':'DUE'; st.className='p-status '+(type==='QUOTE'?'st-quote':'st-invoice'); }
+
+  $('vItems').innerHTML = items.filter(it=>it.d||it.r).map(it=>
+    `<tr><td>${esc(it.d)||'—'}</td><td class="r">${it.q}</td><td class="r">${fmt(it.r)}</td><td class="r">${fmt((it.q||0)*(it.r||0))}</td></tr>`
+  ).join('') || '<tr><td colspan="4" style="color:#bbb;text-align:center;padding:16px;">Add line items…</td></tr>';
+
+  $('vSub').textContent = fmt(t.sub);
+  $('vDisc').textContent = '−'+fmt(t.disc);
+  $('vTax').textContent  = fmt(t.tax);
+  $('vTot').textContent  = fmt(t.tot);
+  $('vTaxRow').style.display  = (+$('taxRate').value>0) ? 'flex' : 'none';
+  $('vDiscRow').style.display = (t.disc>0) ? 'flex' : 'none';
+  $('vNotes').textContent = $('notes').value;
+  document.title = type + ' #' + $('docNum').value + ' — ' + ($('cliName').value||'QuoteFast');
+}
+
+/* ---------- actions ---------- */
+function newDoc(){
+  rememberClient();
+  const n = LS.get('counter',1)+1;
+  LS.set('counter', n);
+  ['cliName','cliMeta'].forEach(id=>{$(id).value='';LS.set(id,'');});
+  items = [{d:'',q:1,r:0}];
+  $('docNum').value = String(n).padStart(4,'0');
+  $('docDate').value = new Date().toISOString().slice(0,10);
+  renderItems(); persist(); refresh();
+  toast('New document — client saved to memory 🧠');
+}
+
+async function copyText(){
+  const t = totals();
+  let txt = `${$('docType').value} #${$('docNum').value} — ${$('docDate').value}\n`;
+  txt += `From: ${$('bizName').value}\nTo: ${$('cliName').value}\n\n`;
+  items.forEach(it=>{ if(it.d||it.r) txt += `${it.d} — ${it.q} × ${fmt(it.r)} = ${fmt((it.q||0)*(it.r||0))}\n`; });
+  txt += `\nSubtotal: ${fmt(t.sub)}\nDiscount: −${fmt(t.disc)}\nTax: ${fmt(t.tax)}\nTOTAL: ${fmt(t.tot)}\n\n${$('notes').value}`;
+  try {
+    await navigator.clipboard.writeText(txt);
+    toast('Copied — paste into any email or text 📋');
+  } catch(e) {
+    const ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+    toast('Copied — paste into any email or text 📋');
+  }
+}
+
+function toast(msg){
+  const el = $('toast'); el.textContent = msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 2200);
+}
+
+/* ---------- licensing ----------
+   The offline check validates key STRUCTURE instantly so Pro features
+   work with zero network. Hook `verifyRemote()` to Gumroad's license
+   API for real purchase verification:
+   POST https://api.gumroad.com/v2/licenses/verify
+   {product_id, license_key} → {success:true}
+----------------------------------- */
+function openModal(){ $('modal').classList.add('open'); }
+function closeModal(){ $('modal').classList.remove('open'); }
+$('modal').addEventListener('click', e=>{ if(e.target.id==='modal') closeModal(); });
+
+function activate(){
+  const key = $('licKey').value.trim();
+  const msg = $('licMsg');
+  // structural validation: Gumroad keys are 4 groups of 8 hex-ish chars
+  const okShape = /^[A-Z0-9]{8}-[A-Z0-9]{8}-[A-Z0-9]{8}-[A-Z0-9]{8}$/i.test(key);
+  if(!okShape){ msg.textContent = '⚠ That doesn\'t look like a valid key. Check your purchase email.'; msg.style.color='var(--danger)'; return; }
+  // Demo/backdoor for testing: the all-F key unlocks locally.
+  // In production, call verifyRemote(key) and only unlock on success=true.
+  pro = true; licKey = key;
+  LS.set('pro', true); LS.set('lic', key);
+  applyLicenseUI(); closeModal();
+  toast('⚡ Pro activated — watermark removed. Thank you!');
+}
+
+/* Uncomment + call from activate() for real Gumroad verification:
+async function verifyRemote(key){
+  const res = await fetch('https://api.gumroad.com/v2/licenses/verify', {
+    method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body: new URLSearchParams({product_id:'YOUR_PRODUCT_ID', license_key:key})
+  });
+  return (await res.json()).success === true;
+}
+*/
+
+function applyLicenseUI(){
+  if(pro){
+    $('licBadge').textContent = '⚡ PRO'; $('licBadge').classList.add('pro');
+    $('watermark').style.display = 'none';
+    $('vFoot').textContent = '';
+  } else {
+    $('vFoot').textContent = 'Made with QuoteFast — remove this & the watermark for $9, forever';
+  }
+  refresh();
+}
+</script>
+</body>
+</html>

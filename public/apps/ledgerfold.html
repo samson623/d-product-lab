@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ledgerfold — Which invoices add up to this deposit?</title>
+<style>
+  :root{
+    --bg:#0a0f0d; --panel:#111815; --panel2:#18211d; --line:#232f29;
+    --ink:#e8f0ec; --dim:#8ba099; --dimmer:#5c706a;
+    --acc:#2fd39a; --acc2:#1fa87a; --accd:#0d2a21;
+    --ok:#2fd39a; --warn:#f0b429; --bad:#ff6b6b; --info:#5aa9ff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+  input,select,textarea{font:inherit;color:inherit}
+  .row{display:flex;align-items:center;gap:8px}
+  .sp{flex:1}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  header{height:54px;display:flex;align-items:center;gap:12px;padding:0 16px;
+    background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:40}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.2px}
+  .logo .m{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--acc),var(--acc2));
+    display:grid;place-items:center;color:#04120c;font:800 13px/1 var(--mono)}
+  .logo small{display:block;font:500 10.5px/1.3 -apple-system,system-ui;color:var(--dim);
+    letter-spacing:.5px;text-transform:uppercase}
+  .pill{font:11px/1 var(--mono);color:var(--ok);background:rgba(47,211,154,.1);
+    border:1px solid rgba(47,211,154,.28);padding:6px 9px;border-radius:999px;white-space:nowrap}
+  .pill.bad{color:var(--bad);background:rgba(255,107,107,.12);border-color:rgba(255,107,107,.35)}
+  .btn{background:var(--panel2);border:1px solid var(--line);padding:7px 12px;border-radius:7px;
+    font-size:13px;transition:.13s;white-space:nowrap}
+  .btn:hover{border-color:#33443c;background:#1e2a24}
+  .btn.pri{background:var(--acc);border-color:var(--acc);color:#04170f;font-weight:600}
+  .btn.pri:hover{background:var(--acc2)}
+  .btn.sm{padding:5px 9px;font-size:12px}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .badge{font:11px/1 var(--mono);padding:5px 8px;border-radius:5px;
+    background:rgba(240,180,41,.12);color:var(--warn);border:1px solid rgba(240,180,41,.3)}
+  .badge.pro{background:rgba(47,211,154,.14);color:var(--acc);border-color:rgba(47,211,154,.35)}
+
+  .wrap{max-width:1220px;margin:0 auto;padding:22px 16px 80px}
+  h1.hero{font-size:27px;letter-spacing:-.6px;margin:8px 0 6px}
+  p.lede{color:var(--dim);margin:0 0 22px;max-width:760px;font-size:14.5px}
+  .sec{margin-bottom:18px}
+  .sec>h3{margin:0 0 9px;font:600 10.5px/1 var(--mono);letter-spacing:1.2px;
+    text-transform:uppercase;color:var(--dimmer)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:14px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+
+  .dz{border:1.5px dashed #2b3a33;border-radius:10px;padding:20px;text-align:center;transition:.15s;
+    background:rgba(24,33,29,.45);cursor:pointer}
+  .dz:hover,.dz.over{border-color:var(--acc);background:rgba(47,211,154,.06)}
+  .dz b{display:block;font-size:13.5px;margin-bottom:3px}
+  .dz span{font-size:12px;color:var(--dimmer)}
+  textarea.paste{width:100%;min-height:104px;background:#0b110e;border:1px solid var(--line);
+    border-radius:8px;padding:9px;font:12px/1.5 var(--mono);outline:none;resize:vertical}
+  textarea.paste:focus{border-color:var(--acc)}
+  .tabs{display:flex;gap:2px;background:#0b110e;border:1px solid var(--line);border-radius:8px;padding:2px;margin-bottom:10px}
+  .tabs button{flex:1;padding:6px;border-radius:6px;font-size:12px;color:var(--dim)}
+  .tabs button.on{background:var(--panel2);color:var(--ink);font-weight:600}
+
+  label.f{display:block;font-size:11px;color:var(--dim);margin:0 0 4px}
+  select,input[type=text],input[type=number]{width:100%;background:#0b110e;border:1px solid var(--line);
+    border-radius:7px;padding:7px 9px;font-size:12.5px;outline:none}
+  select:focus,input:focus{border-color:var(--acc)}
+  .map{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:11px}
+  @media(max-width:640px){.map{grid-template-columns:1fr 1fr}}
+  .stat{font:11.5px/1.8 var(--mono);color:var(--dim)}
+  .stat b{color:var(--ink)}
+  .chk{display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;user-select:none;padding:4px 0}
+  .chk input{accent-color:var(--acc);width:14px;height:14px;cursor:pointer}
+  .presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .hint{font-size:11.5px;color:var(--dimmer);line-height:1.55;margin-top:8px}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:16px}
+  @media(max-width:800px){.kpis{grid-template-columns:1fr 1fr}}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:13px 14px}
+  .kpi u{display:block;text-decoration:none;font:11px/1 var(--mono);color:var(--dimmer);
+    letter-spacing:.7px;text-transform:uppercase;margin-bottom:7px}
+  .kpi b{font:700 23px/1 var(--mono);letter-spacing:-.5px}
+  .kpi i{font-style:normal;font-size:11.5px;color:var(--dim);display:block;margin-top:5px}
+  .kpi.ok b{color:var(--ok)} .kpi.warn b{color:var(--warn)} .kpi.bad b{color:var(--bad)}
+
+  .filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .filters button{padding:6px 11px;border-radius:999px;font-size:12.5px;border:1px solid var(--line);
+    background:var(--panel);color:var(--dim)}
+  .filters button.on{background:var(--panel2);color:var(--ink);border-color:#3a4b43;font-weight:600}
+
+  .dep{background:var(--panel);border:1px solid var(--line);border-radius:11px;margin-bottom:10px;overflow:hidden}
+  .dep.st-ok{border-left:3px solid var(--ok)}
+  .dep.st-rev{border-left:3px solid var(--warn)}
+  .dep.st-no{border-left:3px solid var(--bad)}
+  .dh{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer}
+  .dh:hover{background:rgba(255,255,255,.015)}
+  .dh .amt{font:700 16px/1 var(--mono);min-width:118px;text-align:right}
+  .dh .who{flex:1;min-width:0}
+  .dh .who b{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dh .who span{font:11px/1.4 var(--mono);color:var(--dimmer)}
+  .tag{font:10.5px/1 var(--mono);padding:4px 7px;border-radius:4px;letter-spacing:.4px;white-space:nowrap}
+  .tag.ok{background:rgba(47,211,154,.13);color:var(--ok)}
+  .tag.rev{background:rgba(240,180,41,.13);color:var(--warn)}
+  .tag.no{background:rgba(255,107,107,.13);color:var(--bad)}
+  .tag.inf{background:rgba(90,169,255,.13);color:var(--info)}
+  .db{border-top:1px solid var(--line);padding:12px 14px;background:#0d1310;display:none}
+  .dep.open .db{display:block}
+  .db table{width:100%;border-collapse:collapse;font-size:12.5px}
+  .db th{text-align:left;font:600 10px/1 var(--mono);letter-spacing:.8px;color:var(--dimmer);
+    text-transform:uppercase;padding:0 8px 7px;border-bottom:1px solid var(--line)}
+  .db td{padding:6px 8px;border-bottom:1px solid rgba(35,47,41,.55)}
+  .db td.r{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .db tr:last-child td{border-bottom:0}
+  .db tfoot td{font-weight:700;border-top:1px solid var(--line);border-bottom:0}
+  .why{font-size:12px;color:var(--dim);margin:10px 0 0;padding:9px 11px;background:#111815;
+    border:1px solid var(--line);border-radius:7px;line-height:1.6}
+  .why code{font:11.5px var(--mono);color:var(--ink);background:#0b110e;padding:1px 4px;border-radius:3px}
+  .swap{display:inline-block;font:10.5px/1 var(--mono);color:var(--info);
+    background:rgba(90,169,255,.1);padding:3px 6px;border-radius:4px;margin-left:6px}
+
+  .veil{position:fixed;inset:0;background:rgba(3,7,5,.84);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+  .veil.on{display:flex}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:560px;
+    width:100%;max-height:88vh;overflow:auto;padding:24px}
+  .modal h2{margin:0 0 4px;font-size:19px}
+  .modal .sub{color:var(--dim);font-size:13px;margin-bottom:16px}
+  .price{display:flex;align-items:baseline;gap:9px;margin:14px 0}
+  .price b{font:700 34px/1 var(--mono);letter-spacing:-1.5px}
+  .price s{color:var(--dimmer)}
+  ul.feat{margin:12px 0;padding:0;list-style:none}
+  ul.feat li{padding:5px 0 5px 23px;position:relative;font-size:13px;color:#cfdcd6}
+  ul.feat li:before{content:"✓";position:absolute;left:0;color:var(--acc);font-weight:700}
+  .mono-box{font:11.5px/1.8 var(--mono);background:#0b110e;border:1px solid var(--line);
+    border-radius:8px;padding:13px;white-space:pre-wrap;word-break:break-word;color:#b4c7c0}
+
+  #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);
+    background:var(--panel2);border:1px solid var(--line);padding:11px 18px;border-radius:9px;
+    font-size:13px;z-index:200;transition:.22s;opacity:0;box-shadow:0 8px 30px rgba(0,0,0,.55);max-width:88vw}
+  #toast.on{transform:translateX(-50%) translateY(0);opacity:1}
+  #busy{position:fixed;inset:0;background:rgba(3,7,5,.88);display:none;z-index:150;
+    align-items:center;justify-content:center;flex-direction:column;gap:15px}
+  #busy.on{display:flex}
+  .spin{width:34px;height:34px;border:3px solid #223029;border-top-color:var(--acc);
+    border-radius:50%;animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  #busyTxt{font:12px/1 var(--mono);color:var(--dim)}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="m">Σ</span><span>Ledgerfold<small>deposit → invoice matcher</small></span></div>
+  <div class="sp"></div>
+  <div id="pill" class="pill">◉ NETWORK CALLS: 0</div>
+  <span id="tier" class="badge">FREE · 20 deposits</span>
+  <button class="btn" id="bKey">Key</button>
+  <button class="btn pri" id="bBuy">Unlock $59</button>
+</header>
+
+<div class="wrap">
+
+<!-- ============================ SETUP ============================ -->
+<div id="setup">
+  <h1 class="hero">Which invoices add up to this deposit?</h1>
+  <p class="lede">Paste your open A/R and your bank deposits. Ledgerfold solves the combination for every
+    deposit at once — allowing for wire fees, early-payment discounts and card processing cuts — and tells you
+    where the answer is genuinely ambiguous instead of guessing silently. Nothing is uploaded; there is no server.</p>
+
+  <div class="row" style="margin-bottom:16px;flex-wrap:wrap">
+    <button class="btn pri" id="bDemo">Load a realistic demo ledger</button>
+    <button class="btn" id="bHow">How the matching works</button>
+  </div>
+
+  <div class="grid2 sec">
+    <!-- invoices -->
+    <div class="card">
+      <h3 style="margin:0 0 9px;font:600 10.5px/1 var(--mono);letter-spacing:1.2px;
+        text-transform:uppercase;color:var(--dimmer)">1 · Open invoices (A/R)</h3>
+      <div class="tabs"><button class="on" data-t="i-drop">Upload CSV</button><button data-t="i-paste">Paste</button></div>
+      <div id="i-drop">
+        <div class="dz" id="idz"><b>Drop your A/R aging CSV here</b><span>or click to choose · stays on this device</span></div>
+        <input type="file" id="ifile" accept=".csv,.txt,text/csv" hidden>
+      </div>
+      <div id="i-paste" class="hidden">
+        <textarea class="paste" id="ipaste" placeholder="Invoice,Customer,Date,Amount&#10;1041,Northgate Builders,2026-04-02,4820.00"></textarea>
+        <button class="btn sm" style="margin-top:7px" id="ipbtn">Parse pasted data</button>
+      </div>
+      <div id="istat" class="stat" style="margin-top:10px">No invoice data loaded.</div>
+      <div id="imap" class="map hidden"></div>
+    </div>
+
+    <!-- deposits -->
+    <div class="card">
+      <h3 style="margin:0 0 9px;font:600 10.5px/1 var(--mono);letter-spacing:1.2px;
+        text-transform:uppercase;color:var(--dimmer)">2 · Bank deposits</h3>
+      <div class="tabs"><button class="on" data-t="d-drop">Upload CSV</button><button data-t="d-paste">Paste</button></div>
+      <div id="d-drop">
+        <div class="dz" id="ddz"><b>Drop your bank statement CSV here</b><span>credits only — debits are ignored</span></div>
+        <input type="file" id="dfile" accept=".csv,.txt,text/csv" hidden>
+      </div>
+      <div id="d-paste" class="hidden">
+        <textarea class="paste" id="dpaste" placeholder="Date,Description,Amount&#10;2026-05-12,DEPOSIT CHECK 8841,10085.50"></textarea>
+        <button class="btn sm" style="margin-top:7px" id="dpbtn">Parse pasted data</button>
+      </div>
+      <div id="dstat" class="stat" style="margin-top:10px">No deposit data loaded.</div>
+      <div id="dmap" class="map hidden"></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h3>3 · Matching rules</h3>
+    <div class="card">
+      <div class="map">
+        <div><label class="f">Absolute tolerance ($)</label><input type="number" id="tAbs" value="1.00" step="0.01" min="0"></div>
+        <div><label class="f">Percentage tolerance (%)</label><input type="number" id="tPct" value="0" step="0.1" min="0"></div>
+        <div><label class="f">Per-invoice allowance ($)</label><input type="number" id="tPer" value="0" step="0.01" min="0"></div>
+        <div><label class="f">Max invoices per deposit</label><input type="number" id="tMax" value="10" min="1" max="24"></div>
+      </div>
+      <div class="presets">
+        <button class="btn sm" data-p="exact">Exact only</button>
+        <button class="btn sm" data-p="wire">Wire / bank fees ($50)</button>
+        <button class="btn sm" data-p="card">Card &amp; Stripe payouts (2.9% + 30¢)</button>
+        <button class="btn sm" data-p="disc">Early-pay discounts (2%)</button>
+      </div>
+      <div class="map" style="margin-top:13px">
+        <div><label class="f">Invoice date vs deposit date</label>
+          <select id="dateRule">
+            <option value="7" selected>Invoice on/before deposit (+7d grace)</option>
+            <option value="45">Loose (+45d grace)</option>
+            <option value="off">Ignore dates entirely</option>
+          </select></div>
+        <div><label class="f">Customer-name matching</label>
+          <select id="nameRule">
+            <option value="prefer" selected>Prefer name match, fall back to all</option>
+            <option value="force">Require name match</option>
+            <option value="off">Ignore names</option>
+          </select></div>
+        <div style="grid-column:span 2;align-self:end">
+          <label class="chk"><input type="checkbox" id="deep" checked>
+            Second pass: retry unmatched deposits with relaxed tolerance, flagged for review</label>
+          <label class="chk"><input type="checkbox" id="excl" checked>
+            Enforce exclusivity — an invoice can only settle one deposit</label>
+        </div>
+      </div>
+      <div class="hint">Tolerance exists because payments arrive short: intermediary wire deductions, 2%/10 net 30
+        discounts, and card processors that net their fee out of the payout. Set it to zero if your books are clean —
+        every result tells you the exact variance it accepted.</div>
+    </div>
+  </div>
+
+  <button class="btn pri" id="bSolve" style="padding:11px 22px;font-size:14.5px">Match deposits →</button>
+</div>
+
+<!-- ============================ RESULTS ============================ -->
+<div id="results" class="hidden">
+  <div class="row" style="margin-bottom:16px;flex-wrap:wrap">
+    <button class="btn" id="bBack">← Rules &amp; data</button>
+    <div class="sp"></div>
+    <button class="btn" id="bExpApp">Export applications CSV</button>
+    <button class="btn" id="bExpExc">Export exceptions</button>
+    <button class="btn" id="bReport">Work summary</button>
+  </div>
+  <div class="kpis" id="kpis"></div>
+  <div class="filters" id="filters"></div>
+  <div id="list"></div>
+</div>
+
+</div>
+
+<div class="veil" id="veil"><div class="modal" id="modal"></div></div>
+<div id="busy"><div class="spin"></div><div id="busyTxt">solving…</div></div>
+<div id="toast"></div>
+
+<script>
+/* ==========================================================================
+   Ledgerfold — bounded-cardinality subset-sum matcher for accounts receivable.
+   Zero dependencies. Zero network calls. All arithmetic in integer cents.
+   ========================================================================== */
+(function(){
+"use strict";
+
+/* -------------------------------------------------------------- net tripwire
+   Nothing here needs the network, so every outbound API is replaced with a
+   counter. The header pill is a measurement, not a promise. */
+var OUT = 0;
+function tripped(kind){
+  OUT++;
+  var p = document.getElementById('pill');
+  p.className = 'pill bad';
+  p.textContent = '◉ BLOCKED: ' + OUT + ' (' + kind + ')';
+}
+window.fetch = function(){ tripped('fetch'); return Promise.reject(new Error('blocked')); };
+XMLHttpRequest.prototype.open = function(){ tripped('xhr'); throw new Error('blocked'); };
+if (navigator.sendBeacon) navigator.sendBeacon = function(){ tripped('beacon'); return false; };
+if (window.WebSocket) window.WebSocket = function(){ tripped('ws'); throw new Error('blocked'); };
+if (window.EventSource) window.EventSource = function(){ tripped('sse'); throw new Error('blocked'); };
+
+var $ = function(s){ return document.querySelector(s); };
+var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
+function el(t,c){ var n=document.createElement(t); if(c) n.className=c; return n; }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function toast(m,ms){ var t=$('#toast'); t.textContent=m; t.classList.add('on');
+  clearTimeout(toast._t); toast._t=setTimeout(function(){t.classList.remove('on');}, ms||3000); }
+function busy(on,msg){ $('#busy').classList.toggle('on',!!on); if(msg) $('#busyTxt').textContent=msg; }
+function modal(h){ $('#modal').innerHTML=h; $('#veil').classList.add('on'); }
+function closeModal(){ $('#veil').classList.remove('on'); }
+$('#veil').addEventListener('click', function(e){ if(e.target===$('#veil')) closeModal(); });
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeModal(); });
+
+/* ----------------------------------------------------------------- licensing
+   Offline checksum. Deterrence at a $59 price point, not real DRM.
+   Change SECRET before you sell; mint keys with the matching Node snippet. */
+var SECRET='ledgerfold-2026-v1';
+function fnv(s){ var h=0x811c9dc5; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i);
+  h=(h+(h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24))>>>0; } return h>>>0; }
+function sumFor(x){ return (((fnv(SECRET+'|'+x)^fnv(x+'|'+SECRET))>>>0)
+  .toString(36).toUpperCase()+'XXXX').slice(0,4); }
+function checkKey(raw){
+  var k=String(raw||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(k.indexOf('LF')===0) k=k.slice(2);
+  return k.length===12 && sumFor(k.slice(0,8))===k.slice(8);
+}
+var PRO=false; try{ PRO=checkKey(localStorage.getItem('lf.key')); }catch(e){}
+var FREE_DEPOSITS=20, FREE_INVOICES=120;
+function paintTier(){
+  var t=$('#tier');
+  if(PRO){ t.className='badge pro'; t.textContent='LICENSED · unlimited';
+    $('#bBuy').classList.add('hidden'); $('#bKey').classList.add('hidden'); }
+  else { t.className='badge'; t.textContent='FREE · '+FREE_DEPOSITS+' deposits'; }
+}
+paintTier();
+
+$('#bKey').onclick=function(){
+  modal('<h2>Enter licence key</h2><div class="sub">Verified locally. No activation request is made.</div>'
+   +'<input type="text" id="kIn" placeholder="LF-XXXXXXXX-XXXX" style="width:100%;font:14px/1 var(--mono);'
+   +'text-transform:uppercase;padding:11px;background:#0b110e;border:1px solid var(--line);border-radius:8px">'
+   +'<div id="kMsg" style="min-height:20px;font-size:12.5px;margin-top:8px;color:var(--bad)"></div>'
+   +'<div class="row" style="justify-content:flex-end"><button class="btn" id="kX">Cancel</button>'
+   +'<button class="btn pri" id="kGo">Activate</button></div>');
+  $('#kIn').focus(); $('#kX').onclick=closeModal;
+  $('#kGo').onclick=function(){
+    if(checkKey($('#kIn').value)){ try{localStorage.setItem('lf.key',$('#kIn').value);}catch(e){}
+      PRO=true; paintTier(); closeModal(); toast('Licensed. Row limits and exports unlocked.'); }
+    else $('#kMsg').textContent='That key is not valid — check for transposed characters.';
+  };
+  $('#kIn').onkeydown=function(e){ if(e.key==='Enter') $('#kGo').click(); };
+};
+$('#bBuy').onclick=function(){
+  modal('<h2>Ledgerfold, licensed</h2><div class="sub">One payment. One file. Works with the network cable out.</div>'
+   +'<div class="price"><b>$59</b><s>vs. 3 billable hours</s><span style="color:var(--dim);font-size:13px">once</span></div>'
+   +'<ul class="feat"><li>Unlimited deposits and invoices per run</li>'
+   +'<li>Applications CSV and exceptions exports, unwatermarked</li>'
+   +'<li>Exclusivity solver across the whole batch</li>'
+   +'<li>Second-pass recovery with variance reasons</li>'
+   +'<li>Work summary you can attach to a client invoice</li>'
+   +'<li>No subscription, no seat count, no vendor holding your ledger</li></ul>'
+   +'<div class="hint">This portfolio demonstrates the product workflow. Purchasing and production licence delivery are not connected.</div>'
+   +'<div class="row" style="justify-content:flex-end;margin-top:15px"><button class="btn pri" id="bX">Close</button></div>');
+  $('#bX').onclick=closeModal;
+};
+$('#bHow').onclick=function(){
+  modal('<h2>How the matching works</h2><div class="sub">No black box. Here is the whole algorithm.</div>'
+   +'<div class="mono-box">1  MEMO REFERENCE\n'
+   +'   Invoice numbers found in the bank description are tried\n'
+   +'   first. If they sum to the deposit, that is the answer.\n\n'
+   +'2  SINGLE INVOICE\n'
+   +'   One open invoice equal to the deposit within tolerance.\n\n'
+   +'3  BOUNDED SUBSET SUM\n'
+   +'   Candidates are filtered by customer name and date, then\n'
+   +'   grouped by identical amount. The search runs over counts\n'
+   +'   per amount-group rather than per invoice, which collapses\n'
+   +'   eight identical $500 retainers from 256 permutations to\n'
+   +'   nine distinct answers. Depth-first, largest amount first,\n'
+   +'   pruned by remaining-sum bounds, capped at a node budget.\n\n'
+   +'4  EXCLUSIVITY\n'
+   +'   Deposits are settled in order of certainty. Each locks its\n'
+   +'   invoices, so no invoice pays for two deposits. Deposits\n'
+   +'   left with no conflict-free option are reported, not forced.\n\n'
+   +'5  SECOND PASS\n'
+   +'   Whatever is still unmatched is retried with the relaxed\n'
+   +'   tolerance and labelled for human review.\n\n'
+   +'All money is integer cents. Nothing touches a float.</div>'
+   +'<div class="hint">Subset-sum is NP-complete, so a truncation notice means exactly that: the search hit its '
+   +'budget, not that no answer exists. Narrow it by tightening dates or lowering the max-invoice cap.</div>'
+   +'<div class="row" style="justify-content:flex-end;margin-top:15px"><button class="btn pri" id="hX">Got it</button></div>');
+  $('#hX').onclick=closeModal;
+};
+
+/* ============================== CSV parsing ==============================
+   Hand-rolled RFC-4180 reader so the app has no dependencies whatsoever. */
+function sniffDelim(text){
+  var head = text.slice(0, 4000).split(/\r?\n/).slice(0,5);
+  var best=',', bestScore=-1;
+  [',',';','\t','|'].forEach(function(d){
+    var counts = head.map(function(l){ return l.split(d).length-1; }).filter(function(n){return n>0;});
+    if(!counts.length) return;
+    var avg = counts.reduce(function(a,b){return a+b;},0)/counts.length;
+    var spread = Math.max.apply(null,counts)-Math.min.apply(null,counts);
+    var score = avg - spread*2;
+    if(score>bestScore){ bestScore=score; best=d; }
+  });
+  return best;
+}
+function parseCSV(text){
+  text = String(text).replace(/^\uFEFF/,'');
+  var d = sniffDelim(text), rows=[], row=[], f='', q=false, i=0, n=text.length;
+  while(i<n){
+    var c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){ f+='"'; i+=2; continue; } q=false; i++; continue; }
+      f+=c; i++; continue;
+    }
+    if(c==='"'){ q=true; i++; continue; }
+    if(c===d){ row.push(f); f=''; i++; continue; }
+    if(c==='\n'||c==='\r'){
+      if(c==='\r'&&text[i+1]==='\n') i++;
+      row.push(f); rows.push(row); row=[]; f=''; i++; continue;
+    }
+    f+=c; i++;
+  }
+  row.push(f); rows.push(row);
+  return rows.filter(function(r){ return r.some(function(x){ return String(x).trim()!==''; }); });
+}
+
+/* ------------------------------------------------- money & date parsing
+   Separator convention is detected per column, not per cell, because
+   "1.234" is ambiguous in isolation but never ambiguous in a column. */
+function detectNumMode(vals){
+  var eu=0, us=0;
+  vals.forEach(function(v){
+    var s=String(v==null?'':v);
+    if(/,\d{2}(?!\d)/.test(s) && !/\.\d{2}(?!\d)/.test(s)) eu++;
+    if(/\.\d{2}(?!\d)/.test(s)) us++;
+    if(/\d\.\d{3}(?:\D|$)/.test(s) && /,/.test(s)) eu++;
+  });
+  return eu>us ? 'eu' : 'us';
+}
+function toCents(raw, mode){
+  if(raw==null) return null;
+  var s=String(raw).trim();
+  if(!s) return null;
+  var neg=false;
+  if(/^\(.*\)$/.test(s)){ neg=true; s=s.slice(1,-1); }
+  if(/-\s*$/.test(s)){ neg=true; s=s.replace(/-\s*$/,''); }
+  if(/^\s*-/.test(s)) neg=true;
+  s=s.replace(/[^\d.,]/g,'');
+  if(!s) return null;
+  var digits;
+  if(mode==='eu'){
+    var lc=s.lastIndexOf(',');
+    if(lc>=0){ digits=s.slice(0,lc).replace(/[.,]/g,'')+'.'+s.slice(lc+1).replace(/\D/g,''); }
+    else digits=s.replace(/[.,]/g,'');
+  } else {
+    var ld=s.lastIndexOf('.');
+    if(ld>=0){ digits=s.slice(0,ld).replace(/[.,]/g,'')+'.'+s.slice(ld+1).replace(/\D/g,''); }
+    else digits=s.replace(/[.,]/g,'');
+  }
+  var v=parseFloat(digits);
+  if(!isFinite(v)) return null;
+  var c=Math.round(v*100);
+  return neg ? -c : c;
+}
+var MON={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+function detectDayFirst(vals){
+  var dayFirst=0, monthFirst=0;
+  vals.forEach(function(v){
+    var m=String(v==null?'':v).match(/\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\b/);
+    if(!m) return;
+    if(+m[1]>12) dayFirst++;
+    if(+m[2]>12) monthFirst++;
+  });
+  return dayFirst>monthFirst;
+}
+function toDate(raw, dayFirst){
+  if(raw==null) return null;
+  var s=String(raw).trim();
+  if(!s) return null;
+  var m=s.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/);
+  if(m) return Date.UTC(+m[1], +m[2]-1, +m[3]);
+  m=s.match(/\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\b/);
+  if(m){
+    var a=+m[1], b=+m[2], y=+m[3];
+    if(y<100) y += y<70 ? 2000 : 1900;
+    var dd = dayFirst ? a : b, mm = dayFirst ? b : a;
+    if(mm>12){ var t=mm; mm=dd; dd=t; }
+    return Date.UTC(y, mm-1, dd);
+  }
+  m=s.match(/\b([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})\b/);
+  if(m && MON[m[1].toLowerCase()]!=null) return Date.UTC(+m[3], MON[m[1].toLowerCase()], +m[2]);
+  m=s.match(/\b(\d{1,2})\s+([A-Za-z]{3})[a-z]*\.?\s+(\d{4})\b/);
+  if(m && MON[m[2].toLowerCase()]!=null) return Date.UTC(+m[3], MON[m[2].toLowerCase()], +m[1]);
+  return null;
+}
+function fmt(c){
+  var neg=c<0; c=Math.abs(c);
+  var s=(c/100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  return (neg?'-$':'$')+s;
+}
+function fmtD(ts){
+  if(ts==null) return '—';
+  var d=new Date(ts);
+  return d.toISOString().slice(0,10);
+}
+
+/* --------------------------------------------------- customer-name matching */
+var STOP=/\b(inc|llc|l\.l\.c|ltd|limited|co|corp|corporation|company|pllc|pc|lp|llp|gmbh|bv|nv|sa|srl|pty|plc|the|and|group|holdings|services|service|solutions)\b/g;
+var BANKNOISE=/\b(ach|credit|debit|deposit|dep|wire|transfer|xfer|payment|pmt|pay|check|chk|cheque|eft|remittance|remit|batch|settlement|payout|incoming|from|ref|id|trn|desc|co|entry|customer|online|banking|mobile|branch|counter|electronic|direct|funds|received|nsf|memo)\b/g;
+function tokens(s, bank){
+  var t=String(s==null?'':s).toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9\s]/g,' ');
+  t=t.replace(STOP,' ');
+  if(bank) t=t.replace(BANKNOISE,' ');
+  return t.split(/\s+/).filter(function(w){ return w.length>2 && !/^\d+$/.test(w); });
+}
+function nameScore(invTokens, depTokens){
+  if(!invTokens.length || !depTokens.length) return 0;
+  var set={}; depTokens.forEach(function(w){ set[w]=1; });
+  var hit=0;
+  invTokens.forEach(function(w){
+    if(set[w]){ hit++; return; }
+    for(var k in set){ if(k.length>3 && w.length>3 && (k.indexOf(w)===0 || w.indexOf(k)===0)){ hit+=0.75; return; } }
+  });
+  return hit/invTokens.length;
+}
+function refsInMemo(desc){
+  var out=[], re=/\b\d{3,10}\b/g, m;
+  while((m=re.exec(String(desc||'')))!==null) out.push(m[0]);
+  return out;
+}
+
+/* ============================== data ingest ============================== */
+var IN={ rows:null, head:null, map:{}, items:[] };
+var DP={ rows:null, head:null, map:{}, items:[] };
+
+var GUESS={
+  ref:   /^(invoice|inv|inv[ _-]?no|inv[ _-]?num|number|no|num|doc|document|ref|reference|id|txn|transaction|bill)/i,
+  amount:/(amount|amt|total|balance|open|due|net|value|paid|credit|deposit|payment|debit)/i,
+  date:  /(date|posted|issued|due|created|txn[ _-]?date)/i,
+  name:  /(customer|client|payer|payor|name|company|account|vendor|description|memo|details|narrative|payee)/i
+};
+function guessCol(head, kind, used){
+  for(var i=0;i<head.length;i++){
+    if(used.indexOf(i)>=0) continue;
+    if(GUESS[kind].test(String(head[i]).trim())) return i;
+  }
+  return -1;
+}
+function looksHeader(row){
+  var numeric=0;
+  row.forEach(function(c){ if(toCents(c,'us')!==null && /\d/.test(String(c))) numeric++; });
+  return numeric <= Math.max(0, Math.floor(row.length/3));
+}
+
+function buildMapper(side){
+  var S = side==='inv' ? IN : DP;
+  var box = $(side==='inv' ? '#imap' : '#dmap');
+  var head = S.head;
+  box.innerHTML='';
+  box.classList.remove('hidden');
+  var fields = side==='inv'
+    ? [['ref','Invoice #'],['name','Customer'],['date','Invoice date'],['amount','Amount / balance']]
+    : [['ref','Reference (optional)'],['name','Description / payer'],['date','Deposit date'],['amount','Deposit amount']];
+  fields.forEach(function(f){
+    var d=el('div');
+    d.innerHTML='<label class="f">'+f[1]+'</label>';
+    var sel=el('select');
+    sel.innerHTML='<option value="-1">— none —</option>'+head.map(function(h,i){
+      return '<option value="'+i+'">'+esc(h||('Column '+(i+1)))+'</option>'; }).join('');
+    sel.value = S.map[f[0]]!=null ? S.map[f[0]] : -1;
+    sel.onchange=function(){ S.map[f[0]]=+sel.value; materialize(side); };
+    d.appendChild(sel); box.appendChild(d);
+  });
+}
+
+function ingest(side, text){
+  var S = side==='inv' ? IN : DP;
+  var rows = parseCSV(text);
+  if(rows.length<2){ toast('Could not read at least two rows out of that.'); return; }
+  var hasHeader = looksHeader(rows[0]);
+  S.head = hasHeader ? rows[0].map(function(h,i){ return String(h).trim()||('Column '+(i+1)); })
+                     : rows[0].map(function(_,i){ return 'Column '+(i+1); });
+  S.rows = hasHeader ? rows.slice(1) : rows;
+  var used=[];
+  ['ref','name','date','amount'].forEach(function(k){
+    var i=guessCol(S.head,k,used);
+    if(i>=0){ S.map[k]=i; used.push(i); } else S.map[k]=-1;
+  });
+  if(S.map.amount<0){
+    // fall back to the right-most column that parses as money on most rows
+    var bestI=-1,bestN=0;
+    for(var c=S.head.length-1;c>=0;c--){
+      var n=0;
+      S.rows.slice(0,40).forEach(function(r){ if(toCents(r[c],'us')!==null) n++; });
+      if(n>bestN){ bestN=n; bestI=c; }
+    }
+    S.map.amount=bestI;
+  }
+  if(S.map.name<0){
+    var bestJ=-1,bestL=0;
+    for(var j=0;j<S.head.length;j++){
+      if(j===S.map.amount||j===S.map.date) continue;
+      var L=0; S.rows.slice(0,25).forEach(function(r){ L+=String(r[j]||'').length; });
+      if(L>bestL){ bestL=L; bestJ=j; }
+    }
+    S.map.name=bestJ;
+  }
+  buildMapper(side);
+  materialize(side);
+}
+
+function materialize(side){
+  var S = side==='inv' ? IN : DP;
+  var m = S.map, rows = S.rows||[];
+  var col = function(i){ return rows.map(function(r){ return r[i]; }); };
+  var numMode = m.amount>=0 ? detectNumMode(col(m.amount)) : 'us';
+  var dayFirst = m.date>=0 ? detectDayFirst(col(m.date)) : false;
+  var out=[], skipped=0, negs=0;
+  rows.forEach(function(r,idx){
+    var cents = m.amount>=0 ? toCents(r[m.amount], numMode) : null;
+    if(cents===null || cents===0){ skipped++; return; }
+    if(cents<0){ negs++; if(side==='dep') return; cents=Math.abs(cents); }
+    var name = m.name>=0 ? String(r[m.name]||'').trim() : '';
+    out.push({
+      i: out.length, row: idx+1, cents: cents,
+      ref: m.ref>=0 ? String(r[m.ref]||'').trim() : '',
+      name: name,
+      date: m.date>=0 ? toDate(r[m.date], dayFirst) : null,
+      tok: tokens(name, side==='dep')
+    });
+  });
+  S.items = out;
+  S.numMode = numMode; S.dayFirst = dayFirst;
+  var total = out.reduce(function(a,b){ return a+b.cents; },0);
+  var st = $(side==='inv' ? '#istat' : '#dstat');
+  st.innerHTML = '<b>'+out.length+'</b> '+(side==='inv'?'invoices':'deposits')
+    +' · total <b>'+fmt(total)+'</b>'
+    +(skipped?' · <span style="color:var(--dimmer)">'+skipped+' rows without an amount ignored</span>':'')
+    +(negs&&side==='dep'?' · <span style="color:var(--dimmer)">'+negs+' debits ignored</span>':'')
+    +' · format <b>'+(numMode==='eu'?'1.234,56':'1,234.56')+'</b>'
+    +(m.date>=0?' · dates <b>'+(dayFirst?'DD/MM':'MM/DD')+'</b>':'');
+}
+
+function hookInput(side){
+  var dz=$(side==='inv'?'#idz':'#ddz'), fi=$(side==='inv'?'#ifile':'#dfile');
+  dz.onclick=function(){ fi.click(); };
+  fi.onchange=function(e){
+    var f=e.target.files[0]; if(!f) return;
+    var r=new FileReader();
+    r.onload=function(){ ingest(side, r.result); toast('Loaded '+f.name); };
+    r.onerror=function(){ toast('Could not read that file.'); };
+    r.readAsText(f);
+    e.target.value='';
+  };
+  ['dragenter','dragover'].forEach(function(ev){ dz.addEventListener(ev,function(e){
+    e.preventDefault(); e.stopPropagation(); dz.classList.add('over'); }); });
+  ['dragleave','drop'].forEach(function(ev){ dz.addEventListener(ev,function(e){
+    e.preventDefault(); e.stopPropagation(); dz.classList.remove('over'); }); });
+  dz.addEventListener('drop', function(e){
+    var f=e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if(!f) return;
+    var r=new FileReader(); r.onload=function(){ ingest(side, r.result); toast('Loaded '+f.name); };
+    r.readAsText(f);
+  });
+}
+hookInput('inv'); hookInput('dep');
+window.addEventListener('dragover', function(e){ e.preventDefault(); });
+window.addEventListener('drop', function(e){ e.preventDefault(); });
+
+$('#ipbtn').onclick=function(){ var v=$('#ipaste').value.trim();
+  if(!v) return toast('Paste some rows first.'); ingest('inv', v); };
+$('#dpbtn').onclick=function(){ var v=$('#dpaste').value.trim();
+  if(!v) return toast('Paste some rows first.'); ingest('dep', v); };
+
+$$('.tabs').forEach(function(t){
+  t.querySelectorAll('button').forEach(function(b){
+    b.onclick=function(){
+      t.querySelectorAll('button').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+      t.querySelectorAll('button').forEach(function(x){
+        var p=$('#'+x.dataset.t); if(p) p.classList.toggle('hidden', x!==b); });
+    };
+  });
+});
+
+/* ================================ presets ================================ */
+
+$$('.presets .btn').forEach(function(b){
+  b.onclick=function(){
+    var p=b.dataset.p;
+    if(p==='exact'){ $('#tAbs').value='0.00'; $('#tPct').value='0'; $('#tPer').value='0.00'; }
+    if(p==='wire'){ $('#tAbs').value='50.00'; $('#tPct').value='0'; $('#tPer').value='0.00'; }
+    if(p==='card'){ $('#tAbs').value='0.30'; $('#tPct').value='2.9'; $('#tPer').value='0.30'; }
+    if(p==='disc'){ $('#tAbs').value='0.50'; $('#tPct').value='2'; $('#tPer').value='0.00'; }
+    toast('Tolerance preset applied.');
+  };
+});
+
+/* ========================== THE SOLVER ===================================
+   Bounded-cardinality subset sum over amount-groups.
+
+   Real A/R is full of identical amounts — monthly retainers, flat fees, the
+   same service billed weekly. Searching over individual invoices makes eight
+   identical $500 invoices generate 2^8 permutations of the same answer.
+   Searching over (amount, how many) collapses that to 9 distinct answers and
+   turns a combinatorial explosion into a note that says "interchangeable".
+
+   Pruning: amounts descending, so oversized items are skipped immediately;
+   a suffix-sum bound kills branches that can no longer reach the target; a
+   node budget guarantees the UI never hangs and truncation is reported. */
+function group(items){
+  var by={};
+  items.forEach(function(it){ (by[it.cents]=by[it.cents]||[]).push(it); });
+  return Object.keys(by).map(function(k){ return { cents:+k, pool:by[k] }; })
+    .sort(function(a,b){ return b.cents-a.cents; });
+}
+
+function solve(target, groups, tol, maxItems, maxSol, budget){
+  var n=groups.length;
+  var suffix=new Array(n+1); suffix[n]=0;
+  for(var i=n-1;i>=0;i--) suffix[i]=suffix[i+1]+groups[i].cents*groups[i].pool.length;
+  var slack = tol(maxItems);
+  var sols=[], nodes=0, truncated=false, pick=[];
+
+  function dfs(k, rem, used){
+    if(sols.length>=maxSol || nodes>budget){ truncated=true; return; }
+    nodes++;
+    if(used>0 && Math.abs(rem)<=tol(used)){
+      sols.push({ picks:pick.slice(), diff:-rem, count:used });
+      if(rem===0) return;               // perfect; nothing to improve on
+    }
+    if(k>=n || used>=maxItems || rem<=0) return;
+    if(suffix[k] < rem-slack) return;   // cannot possibly reach the target
+    for(var j=k;j<n;j++){
+      var g=groups[j];
+      if(g.cents<=0) continue;
+      var cap=Math.floor((rem+tol(Math.min(maxItems,used+1)))/g.cents);
+      var maxC=Math.min(g.pool.length, maxItems-used, cap);
+      for(var c=maxC;c>=1;c--){
+        pick.push({ g:j, c:c });
+        dfs(j+1, rem-g.cents*c, used+c);
+        pick.pop();
+        if(sols.length>=maxSol || nodes>budget){ truncated=true; return; }
+      }
+    }
+  }
+  dfs(0, target, 0);
+
+  // distinct answers only; prefer exact, then fewest invoices, then tightest
+  var seen={}, uniq=[];
+  sols.forEach(function(s){
+    var key=s.picks.map(function(p){ return groups[p.g].cents+'x'+p.c; }).sort().join('|');
+    if(seen[key]) return; seen[key]=1; uniq.push(s);
+  });
+  uniq.sort(function(a,b){
+    return Math.abs(a.diff)-Math.abs(b.diff) || a.count-b.count || a.picks.length-b.picks.length;
+  });
+  return { sols:uniq, truncated:truncated, nodes:nodes };
+}
+
+/* Turn a group/count answer into concrete invoices, honouring locks. */
+function realize(sol, groups, locked){
+  var invs=[], swaps=[];
+  for(var i=0;i<sol.picks.length;i++){
+    var p=sol.picks[i], g=groups[p.g];
+    var free=g.pool.filter(function(it){ return !locked[it.i]; });
+    if(free.length<p.c) return null;                 // conflicts with a settled deposit
+    invs=invs.concat(free.slice(0,p.c));
+    if(free.length>p.c) swaps.push({ cents:g.cents, used:p.c, pool:free.length });
+  }
+  return { invs:invs, swaps:swaps, diff:sol.diff };
+}
+
+/* ============================== orchestration ============================ */
+var RES=[], STATS={};
+
+function makeTol(target, abs, pct, per){
+  var pctPart = Math.ceil(Math.abs(target)*pct/10000);   // pct is basis-of-100 cents
+  return function(count){ return abs + pctPart + per*(count||1); };
+}
+
+function candidatesFor(dep, invoices, nameRule, graceDays){
+  var pool = invoices;
+  if(graceDays!==null){
+    var lim = dep.date!=null ? dep.date + graceDays*864e5 : null;
+    if(lim!=null) pool = pool.filter(function(it){ return it.date==null || it.date<=lim; });
+  }
+  if(nameRule!=='off'){
+    var scored = pool.filter(function(it){ return nameScore(it.tok, dep.tok) >= 0.5; });
+    if(scored.length) return { pool:scored, named:true };
+    if(nameRule==='force') return { pool:[], named:true };
+  }
+  return { pool:pool, named:false };
+}
+
+function run(){
+  var invoices = IN.items.slice(), deposits = DP.items.slice();
+  if(!invoices.length) return toast('Load your open invoices first.');
+  if(!deposits.length) return toast('Load your bank deposits first.');
+
+  var capped = null;
+  if(!PRO && (deposits.length>FREE_DEPOSITS || invoices.length>FREE_INVOICES)){
+    capped = { d:deposits.length, i:invoices.length };
+    deposits = deposits.slice(0, FREE_DEPOSITS);
+    invoices = invoices.slice(0, FREE_INVOICES);
+  }
+
+  var abs = Math.max(0, Math.round((parseFloat($('#tAbs').value)||0)*100));
+  var pct = Math.max(0, Math.round((parseFloat($('#tPct').value)||0)*100));
+  var per = Math.max(0, Math.round((parseFloat($('#tPer').value)||0)*100));
+  var maxItems = Math.min(24, Math.max(1, parseInt($('#tMax').value,10)||10));
+  var nameRule = $('#nameRule').value;
+  var dr = $('#dateRule').value;
+  var grace = dr==='off' ? null : parseInt(dr,10);
+  var deep = $('#deep').checked, exclusive = $('#excl').checked;
+  var BUDGET = 300000, MAXSOL = 24;
+
+  busy(true,'phase 1 — generating candidates…');
+
+  setTimeout(function(){
+  var cand = deposits.map(function(dep){
+    var c = candidatesFor(dep, invoices, nameRule, grace);
+    var tol = makeTol(dep.cents, abs, pct, per);
+    var out = { dep:dep, named:c.named, tol:tol, basis:'', groups:[], sols:[], truncated:false, relaxed:false };
+
+    // 1 — memo reference
+    var refs = refsInMemo(dep.name);
+    if(refs.length){
+      var hit = invoices.filter(function(it){
+        if(!it.ref) return false;
+        var r=it.ref.replace(/^\D+/,'');
+        return refs.indexOf(it.ref)>=0 || (r && refs.indexOf(r)>=0);
+      });
+      if(hit.length){
+        var s = hit.reduce(function(a,b){ return a+b.cents; },0);
+        if(Math.abs(dep.cents-s) <= tol(hit.length)){
+          out.basis='memo'; out.groups=group(hit);
+          out.sols=[{ picks:out.groups.map(function(g,gi){ return {g:gi,c:g.pool.length}; }),
+                      diff:s-dep.cents, count:hit.length }];
+          return out;
+        }
+      }
+    }
+
+    // 2 & 3 — single invoice, then bounded subset sum
+    var pool = c.pool.filter(function(it){ return it.cents <= dep.cents + tol(maxItems); });
+    out.groups = group(pool);
+    var r = solve(dep.cents, out.groups, tol, maxItems, MAXSOL, BUDGET);
+    out.sols = r.sols; out.truncated = r.truncated;
+
+    // widen to every invoice if a name-restricted search came up empty
+    if(!out.sols.length && c.named && nameRule==='prefer'){
+      var wide = invoices.filter(function(it){
+        if(grace!==null && dep.date!=null && it.date!=null && it.date > dep.date+grace*864e5) return false;
+        return it.cents <= dep.cents + tol(maxItems);
+      });
+      out.groups = group(wide);
+      var r2 = solve(dep.cents, out.groups, tol, maxItems, MAXSOL, BUDGET);
+      out.sols = r2.sols; out.truncated = r2.truncated; out.named = false;
+    }
+    out.basis = out.sols.length ? (out.sols[0].count===1 ? 'single' : 'subset') : '';
+    return out;
+  });
+
+  // ---- phase 2: exclusivity. Settle the most certain deposits first so that
+  // ambiguous ones inherit a smaller, cleaner pool of remaining invoices.
+  busy(true,'phase 2 — resolving conflicts…');
+
+  var order = cand.map(function(c,i){ return i; }).sort(function(a,a2){
+    var A=cand[a], B=cand[a2];
+    var ax = A.sols.length? (A.sols[0].diff===0?0:1) : 3, bx = B.sols.length? (B.sols[0].diff===0?0:1) : 3;
+    if(ax!==bx) return ax-bx;
+    var an = A.sols.length||99, bn = B.sols.length||99;
+    if(an!==bn) return an-bn;
+    return (A.sols[0]?A.sols[0].count:99)-(B.sols[0]?B.sols[0].count:99);
+  });
+
+  var locked={}, results=new Array(cand.length);
+  order.forEach(function(idx){
+    var c=cand[idx], chosen=null, alts=[], blocked=0;
+    for(var k=0;k<c.sols.length;k++){
+      var m = realize(c.sols[k], c.groups, exclusive?locked:{});
+      if(!m){ blocked++; continue; }
+      if(!chosen) chosen=m; else if(alts.length<8) alts.push(m);
+    }
+    if(chosen && exclusive) chosen.invs.forEach(function(it){ locked[it.i]=true; });
+    results[idx] = { dep:c.dep, chosen:chosen, alts:alts, blocked:blocked,
+                     basis:c.basis, named:c.named, truncated:c.truncated, relaxed:false,
+                     tolAt: chosen ? c.tol(chosen.invs.length) : c.tol(1) };
+  });
+
+  // ---- phase 3: relaxed retry for whatever is still open
+  if(deep){
+    busy(true,'phase 3 — second pass on unmatched…');
+    var rAbs = Math.max(abs, 5000), rPct = Math.max(pct, 300), rPer = Math.max(per, 100);
+    order.forEach(function(idx){
+      var R=results[idx];
+      if(R.chosen) return;
+      var dep=R.dep;
+      var tol2 = makeTol(dep.cents, rAbs, rPct, rPer);
+      var pool = invoices.filter(function(it){
+        if(exclusive && locked[it.i]) return false;
+        return it.cents <= dep.cents + tol2(maxItems);
+      });
+      var g2 = group(pool);
+      var r3 = solve(dep.cents, g2, tol2, maxItems, 12, BUDGET);
+      if(!r3.sols.length){ R.truncated = R.truncated||r3.truncated; return; }
+      var m=null, alts=[];
+      for(var k=0;k<r3.sols.length;k++){
+        var mm = realize(r3.sols[k], g2, exclusive?locked:{});
+        if(!mm) continue;
+        if(!m) m=mm; else if(alts.length<6) alts.push(mm);
+      }
+      if(m){
+        if(exclusive) m.invs.forEach(function(it){ locked[it.i]=true; });
+        R.chosen=m; R.alts=alts; R.relaxed=true; R.basis='relaxed';
+        R.tolAt=tol2(m.invs.length);
+      }
+    });
+  }
+
+  // ---- classify
+  results.forEach(function(R){
+    if(!R.chosen){ R.status='none'; return; }
+    var ambiguous = R.alts.length>0 || (R.chosen.swaps && R.chosen.swaps.length>0);
+    if(R.relaxed) R.status='review';
+    else if(R.chosen.diff!==0) R.status='review';
+    else if(ambiguous) R.status='review';
+    else R.status='ok';
+  });
+
+  RES = results;
+  var used={};
+  RES.forEach(function(R){ if(R.chosen) R.chosen.invs.forEach(function(it){ used[it.i]=1; }); });
+  STATS = {
+    deposits: results.length,
+    invoices: invoices.length,
+    ok: results.filter(function(R){ return R.status==='ok'; }).length,
+    review: results.filter(function(R){ return R.status==='review'; }).length,
+    none: results.filter(function(R){ return R.status==='none'; }).length,
+    settledCents: results.reduce(function(a,R){ return a + (R.chosen?R.dep.cents:0); },0),
+    depTotal: results.reduce(function(a,R){ return a+R.dep.cents; },0),
+    invApplied: Object.keys(used).length,
+    varianceCents: results.reduce(function(a,R){ return a + (R.chosen?R.chosen.diff:0); },0),
+    truncated: results.filter(function(R){ return R.truncated; }).length,
+    openLeft: invoices.filter(function(it){ return !used[it.i]; })
+  };
+
+  busy(false);
+  if(capped) toast('Free build matched the first '+FREE_DEPOSITS+' of '+capped.d
+    +' deposits against '+FREE_INVOICES+' invoices.', 5200);
+  paintResults();
+  }, 30);
+}
+
+/* =============================== rendering =============================== */
+var FILTER='all';
+
+function paintResults(){
+  $('#setup').classList.add('hidden');
+  $('#results').classList.remove('hidden');
+
+  var pctSettled = STATS.depTotal ? Math.round(STATS.settledCents/STATS.depTotal*100) : 0;
+  $('#kpis').innerHTML =
+     kpi('ok','Deposits settled', STATS.ok+STATS.review+' / '+STATS.deposits,
+         fmt(STATS.settledCents)+' of '+fmt(STATS.depTotal)+' ('+pctSettled+'%)')
+   + kpi('','Clean matches', String(STATS.ok), 'exact, unique, no conflicts')
+   + kpi('warn','Need review', String(STATS.review), 'variance, ambiguity or relaxed pass')
+   + kpi('bad','No match found', String(STATS.none),
+         STATS.openLeft.length+' invoices left open · '+fmt(STATS.varianceCents)+' net variance');
+
+  $('#filters').innerHTML = [['all','All '+STATS.deposits],['ok','Clean '+STATS.ok],
+    ['review','Review '+STATS.review],['none','Unmatched '+STATS.none]]
+    .map(function(f){ return '<button data-f="'+f[0]+'"'+(FILTER===f[0]?' class="on"':'')+'>'+f[1]+'</button>'; }).join('');
+
+  $$('#filters button').forEach(function(b){ b.onclick=function(){ FILTER=b.dataset.f; paintResults(); }; });
+
+  var list=$('#list'); list.innerHTML='';
+  var shown=RES.filter(function(R){ return FILTER==='all' || R.status===FILTER; });
+  if(!shown.length){ list.innerHTML='<div class="card" style="color:var(--dim)">Nothing in this bucket.</div>'; return; }
+  shown.forEach(function(R){ list.appendChild(depNode(R)); });
+
+  if(STATS.truncated) toast(STATS.truncated+' deposit(s) hit the search budget — tighten the date rule or lower '
+    +'the max-invoice cap for a complete search.', 6000);
+}
+function kpi(cls,label,big,sub){
+  return '<div class="kpi '+cls+'"><u>'+label+'</u><b>'+esc(big)+'</b><i>'+esc(sub)+'</i></div>';
+}
+
+function depNode(R){
+  var d=R.dep;
+  var st = R.status==='ok'?'ok':(R.status==='review'?'rev':'no');
+  var node=el('div','dep st-'+st);
+
+  var tags=[];
+  if(R.status==='ok') tags.push('<span class="tag ok">EXACT</span>');
+  if(R.chosen && R.chosen.diff!==0) tags.push('<span class="tag rev">'
+    +(R.chosen.diff<0?'SHORT ':'OVER ')+fmt(Math.abs(R.chosen.diff))+'</span>');
+  if(R.basis==='memo') tags.push('<span class="tag inf">MEMO REF</span>');
+  if(R.relaxed) tags.push('<span class="tag rev">RELAXED PASS</span>');
+  if(R.alts.length) tags.push('<span class="tag rev">'+(R.alts.length+1)+' WAYS</span>');
+  if(R.chosen && R.chosen.swaps.length) tags.push('<span class="tag inf">INTERCHANGEABLE</span>');
+  if(R.status==='none') tags.push('<span class="tag no">NO MATCH</span>');
+  if(R.truncated) tags.push('<span class="tag no">TRUNCATED</span>');
+  if(R.blocked) tags.push('<span class="tag inf">'+R.blocked+' BLOCKED</span>');
+
+  var h=el('div','dh');
+  h.innerHTML='<div class="amt">'+fmt(d.cents)+'</div>'
+    +'<div class="who"><b>'+esc(d.name||'(no description)')+'</b>'
+    +'<span>'+fmtD(d.date)+' · row '+d.row+(d.ref?' · '+esc(d.ref):'')+'</span></div>'
+    +tags.join(' ')+'<span style="color:var(--dimmer);font:11px var(--mono)">▾</span>';
+  h.onclick=function(){ node.classList.toggle('open'); };
+  node.appendChild(h);
+
+  var b=el('div','db');
+  if(!R.chosen){
+    b.innerHTML='<div class="why">No combination of open invoices reaches '+fmt(d.cents)
+      +' within the tolerance you set'
+      +(R.named?', among invoices whose customer matched this description':'')
+      +'. Common causes: a partial payment against a larger invoice, a prepayment for something not yet '
+      +'invoiced, an invoice missing from the A/R export, or a credit memo netted into the deposit.'
+      +(R.truncated?' <b>The search also hit its node budget</b>, so a match may exist beyond what was explored.':'')
+      +'</div>';
+  } else {
+    var m=R.chosen;
+    var rowsHtml = m.invs.map(function(it){
+      var sw = m.swaps.filter(function(s){ return s.cents===it.cents; })[0];
+      return '<tr><td>'+esc(it.ref||'—')+'</td><td>'+esc(it.name||'—')+'</td>'
+        +'<td class="r">'+fmtD(it.date)+'</td><td class="r">'+fmt(it.cents)+'</td>'
+        +'<td>'+(sw?'<span class="swap">any '+sw.used+' of '+sw.pool+' identical</span>':'')+'</td></tr>';
+    }).join('');
+    var sum=m.invs.reduce(function(a,b2){ return a+b2.cents; },0);
+    b.innerHTML='<table><thead><tr><th>Invoice</th><th>Customer</th><th style="text-align:right">Date</th>'
+      +'<th style="text-align:right">Amount</th><th></th></tr></thead><tbody>'+rowsHtml+'</tbody>'
+      +'<tfoot><tr><td colspan="3">'+m.invs.length+' invoice'+(m.invs.length===1?'':'s')+'</td>'
+      +'<td class="r">'+fmt(sum)+'</td><td></td></tr>'
+      +'<tr><td colspan="3" style="color:var(--dim);font-weight:400">Deposit</td>'
+      +'<td class="r" style="font-weight:400">'+fmt(d.cents)+'</td><td></td></tr>'
+      +'<tr><td colspan="3" style="color:'+(m.diff===0?'var(--ok)':'var(--warn)')+'">Variance</td>'
+      +'<td class="r" style="color:'+(m.diff===0?'var(--ok)':'var(--warn)')+'">'+fmt(m.diff)+'</td>'
+      +'<td></td></tr></tfoot></table>';
+
+    var why='Matched by <code>'+(R.basis==='memo'?'invoice numbers in the bank description'
+      :R.basis==='single'?'a single invoice of equal value'
+      :R.basis==='relaxed'?'the relaxed second pass':'bounded subset sum')+'</code>'
+      +(R.named?' within this customer&rsquo;s open invoices':' across all open invoices')
+      +'. Tolerance allowed at this size: <code>'+fmt(R.tolAt)+'</code>.';
+    if(m.diff!==0) why+=' The deposit is <b>'+fmt(Math.abs(m.diff))+' '+(m.diff<0?'short of':'above')
+      +'</b> the invoice total — check for a wire deduction, an early-payment discount or a credit memo before posting.';
+    if(m.swaps.length) why+=' Some invoices share an identical amount, so the specific invoice numbers above are '
+      +'one valid choice of several; the total is correct either way, but pick deliberately if aging matters.';
+    if(R.alts.length) why+=' <b>'+(R.alts.length+1)+' genuinely different combinations</b> hit this total — '
+      +'the one shown is the tightest and shortest. Do not post it blind.';
+    if(R.blocked) why+=' '+R.blocked+' other combination(s) were rejected because they needed invoices already '
+      +'settled by a different deposit.';
+    if(R.truncated) why+=' The search stopped at its node budget, so other combinations may exist.';
+    b.insertAdjacentHTML('beforeend','<div class="why">'+why+'</div>');
+
+    if(R.alts.length){
+      var altBox=el('div');
+      altBox.style.marginTop='10px';
+      altBox.innerHTML='<label class="f">Alternative combinations</label>';
+      R.alts.forEach(function(a,ai){
+        var btn=el('button','btn sm');
+        btn.style.marginRight='6px'; btn.style.marginBottom='6px';
+        btn.textContent = a.invs.length+' inv · '+fmt(a.invs.reduce(function(x,y){return x+y.cents;},0))
+          + (a.diff===0?' · exact':' · '+fmt(a.diff));
+        btn.onclick=function(e){
+          e.stopPropagation();
+          var prev=R.chosen; R.chosen=a; R.alts[ai]=prev;
+          var fresh=depNode(R); fresh.classList.add('open');
+          node.parentNode.replaceChild(fresh,node);
+        };
+        altBox.appendChild(btn);
+      });
+      altBox.insertAdjacentHTML('beforeend','<div class="hint">Swapping here changes only this deposit; '
+        +'re-run the match if you want exclusivity recalculated across the batch.</div>');
+      b.appendChild(altBox);
+    }
+  }
+  node.appendChild(b);
+  if(R.status!=='ok') node.classList.add('open');
+  return node;
+}
+
+/* ================================ exports ================================ */
+function csvCell(v){
+  var s=String(v==null?'':v);
+  return /[",\n\r]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+}
+function dl(text, name, mime){
+  var b=new Blob([text],{type:mime||'text/csv;charset=utf-8'});
+  var u=URL.createObjectURL(b), a=el('a');
+  a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(u); }, 4000);
+}
+$('#bExpApp').onclick=function(){
+  var head=['DepositDate','DepositDescription','DepositAmount','InvoiceRef','InvoiceCustomer',
+    'InvoiceDate','InvoiceAmount','DepositVariance','Status','Basis','Ambiguity','Notes'];
+  var lines=[head.join(',')];
+  RES.forEach(function(R){
+    if(!R.chosen) return;
+    var amb = R.alts.length ? (R.alts.length+1)+' combinations' :
+              (R.chosen.swaps.length ? 'interchangeable amounts' : 'unique');
+    R.chosen.invs.forEach(function(it,k){
+      lines.push([fmtD(R.dep.date), R.dep.name, (R.dep.cents/100).toFixed(2), it.ref, it.name,
+        fmtD(it.date), (it.cents/100).toFixed(2),
+        k===0 ? (R.chosen.diff/100).toFixed(2) : '',
+        R.status==='ok'?'CLEAN':'REVIEW', R.basis, amb,
+        R.truncated?'search truncated':''].map(csvCell).join(','));
+    });
+  });
+  if(!PRO) lines.push('','"Produced with an unlicensed copy of Ledgerfold"');
+  dl(lines.join('\r\n'),'ledgerfold_applications.csv');
+  toast('Applications CSV exported — one row per invoice to apply.');
+};
+$('#bExpExc').onclick=function(){
+  var lines=['Type,Date,Reference,Customer,Amount,Reason'];
+  RES.forEach(function(R){
+    if(R.chosen && R.status!=='none') return;
+    lines.push(['UNMATCHED DEPOSIT', fmtD(R.dep.date), R.dep.ref, R.dep.name,
+      (R.dep.cents/100).toFixed(2),
+      R.truncated?'no combination found within budget':'no combination within tolerance'].map(csvCell).join(','));
+  });
+  STATS.openLeft.forEach(function(it){
+    lines.push(['STILL OPEN INVOICE', fmtD(it.date), it.ref, it.name,
+      (it.cents/100).toFixed(2),'not consumed by any deposit'].map(csvCell).join(','));
+  });
+  dl(lines.join('\r\n'),'ledgerfold_exceptions.csv');
+  toast('Exceptions exported.');
+};
+$('#bReport').onclick=function(){
+  var t=new Date();
+  var txt='LEDGERFOLD RECONCILIATION SUMMARY\n'
+   +'=================================\n'
+   +'Generated        '+t.toISOString()+'\n\n'
+   +'INPUT\n'
+   +'  Deposits       '+STATS.deposits+'  totalling '+fmt(STATS.depTotal)+'\n'
+   +'  Open invoices  '+STATS.invoices+'\n\n'
+   +'RESULT\n'
+   +'  Clean matches  '+STATS.ok+'\n'
+   +'  Need review    '+STATS.review+'\n'
+   +'  No match       '+STATS.none+'\n'
+   +'  Value settled  '+fmt(STATS.settledCents)+'\n'
+   +'  Net variance   '+fmt(STATS.varianceCents)+'\n'
+   +'  Invoices applied '+STATS.invApplied+' of '+STATS.invoices+'\n'
+   +'  Invoices still open '+STATS.openLeft.length+'\n\n'
+   +'TOLERANCE APPLIED\n'
+   +'  Absolute       $'+$('#tAbs').value+'\n'
+   +'  Percentage     '+$('#tPct').value+'%\n'
+   +'  Per invoice    $'+$('#tPer').value+'\n'
+   +'  Max invoices per deposit '+$('#tMax').value+'\n\n'
+   +'PROCESSING\n'
+   +'  Entirely in-browser. Outbound network requests: '+OUT+'.\n'
+   +'  No ledger data was transmitted to any third party.\n\n'
+   +'REVIEW ITEMS\n';
+  RES.forEach(function(R){
+    if(R.status==='ok') return;
+    txt+='  '+fmtD(R.dep.date)+'  '+fmt(R.dep.cents)+'  '+(R.dep.name||'').slice(0,38)+'\n'
+      +'      '+(R.chosen
+        ? (R.chosen.invs.length+' invoice(s), variance '+fmt(R.chosen.diff)
+           +(R.alts.length?', '+(R.alts.length+1)+' possible combinations':'')
+           +(R.relaxed?', relaxed pass':''))
+        : 'unmatched')+'\n';
+  });
+  modal('<h2>Work summary</h2><div class="sub">Attach this to your engagement notes or client invoice.</div>'
+   +'<div class="mono-box">'+esc(txt)+'</div>'
+   +'<div class="row" style="justify-content:flex-end;margin-top:15px">'
+   +'<button class="btn" id="wC">Copy</button><button class="btn" id="wD">Save .txt</button>'
+   +'<button class="btn pri" id="wX">Close</button></div>');
+  $('#wC').onclick=function(){ var ta=el('textarea'); ta.value=txt; document.body.appendChild(ta);
+    ta.select(); try{ document.execCommand('copy'); toast('Copied.'); }catch(e){} ta.remove(); };
+  $('#wD').onclick=function(){ dl(txt,'ledgerfold_summary.txt','text/plain'); };
+  $('#wX').onclick=closeModal;
+};
+
+/* ================================= wiring ================================ */
+$('#bSolve').onclick=run;
+$('#bBack').onclick=function(){ $('#results').classList.add('hidden'); $('#setup').classList.remove('hidden');
+  window.scrollTo(0,0); };
+
+$('#bDemo').onclick=function(){
+  var inv=
+'Invoice,Customer,Date,Amount\n'+
+'1041,Northgate Builders LLC,2026-04-02,4820.00\n'+
+'1042,Northgate Builders LLC,2026-04-09,1275.50\n'+
+'1043,Northgate Builders LLC,2026-04-16,3990.00\n'+
+'1044,Harbor Point Dental,2026-04-03,850.00\n'+
+'1045,Harbor Point Dental,2026-04-17,850.00\n'+
+'1046,Harbor Point Dental,2026-05-01,850.00\n'+
+'1047,Vela Creative Studio,2026-04-11,12400.00\n'+
+'1048,Vela Creative Studio,2026-04-25,6150.75\n'+
+'1049,Riverside Property Mgmt,2026-04-05,2200.00\n'+
+'1050,Riverside Property Mgmt,2026-04-19,2200.00\n'+
+'1051,Riverside Property Mgmt,2026-05-02,2200.00\n'+
+'1052,Riverside Property Mgmt,2026-05-09,2200.00\n'+
+'1053,Kestrel Logistics Inc,2026-04-08,7325.40\n'+
+'1054,Kestrel Logistics Inc,2026-04-22,980.00\n'+
+'1055,Ambler & Fitch PC,2026-04-14,15000.00\n'+
+'1056,Ambler & Fitch PC,2026-04-28,4375.25\n'+
+'1057,Sunniva Foods,2026-04-30,640.00\n'+
+'1058,Sunniva Foods,2026-05-06,1180.60\n'+
+'1059,Talon Fabrication,2026-05-04,9060.00\n'+
+'1060,Talon Fabrication,2026-05-11,3145.80\n';
+  var dep=
+'Date,Description,Amount\n'+
+'2026-05-12,DEPOSIT CHECK 8841 NORTHGATE BUILDERS,10085.50\n'+
+'2026-05-13,ACH CREDIT HARBOR POINT DENTAL,1700.00\n'+
+'2026-05-14,WIRE IN VELA CREATIVE STUDIO,18550.75\n'+
+'2026-05-15,DEPOSIT RIVERSIDE PROPERTY MGMT,6600.00\n'+
+'2026-05-15,ACH KESTREL LOGISTICS INV 1053 1054,8305.40\n'+
+'2026-05-18,CHECK 2210 AMBLER AND FITCH,19000.00\n'+
+'2026-05-19,STRIPE TRANSFER ST-2026-0519,1767.20\n'+
+'2026-05-20,ACH TALON FABRICATION,9060.00\n'+
+'2026-05-21,DEPOSIT UNIDENTIFIED,4500.00\n';
+  $('#ipaste').value=inv; $('#dpaste').value=dep;
+  ingest('inv',inv); ingest('dep',dep);
+  toast('Demo ledger loaded — 20 invoices, 9 deposits. Hit "Match deposits".', 4200);
+  $('#bSolve').scrollIntoView({behavior:'smooth',block:'center'});
+};
+
+})();
+</script>
+</body>
+</html>

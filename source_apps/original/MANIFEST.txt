@@ -1,0 +1,23 @@
+D_PORTFOLIO_COMPLETE_WORK_PACKAGE
+
+Included instruction files:
+- PASTE_THIS_INTO_WORK.txt
+- START_HERE.txt
+- MASTER_BUILD_PROMPT.txt
+- MANIFEST.txt
+
+Included application source files in /source_apps:
+- sowguard.html
+- iron redact.html
+- pixel gate.html
+- profitpreflight(1).html
+- quote fast.html
+- bidlens.html
+- blackbar.html
+- ledgerfold.html
+- nudgeledger.html
+- sitepulse.html
+- script(1).js
+- styles (4)(1).css
+
+Purpose: one self-contained handoff package for building, repairing, integrating, browser-testing, and polishing D's initial professional product portfolio.

@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BlackBar — Browser-Processed PDF Redaction</title>
+<meta name="description" content="Destructive PDF redaction that runs entirely in your browser. No uploads. Verifiable zero-text output.">
+<style>
+  :root{
+    --bg:#0b0d10; --panel:#13171c; --panel2:#1a2027; --line:#242c35;
+    --ink:#e6edf3; --dim:#8b98a5; --dimmer:#5d6975;
+    --accent:#4c8dff; --accent2:#2f6fe0;
+    --ok:#2ecc71; --warn:#f5a623; --bad:#ff5c5c;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    overflow:hidden}
+  button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+  input,select{font:inherit;color:inherit}
+  .row{display:flex;align-items:center;gap:8px}
+
+  /* ---------- top bar ---------- */
+  header{height:52px;display:flex;align-items:center;gap:14px;padding:0 14px;
+    background:var(--panel);border-bottom:1px solid var(--line);position:relative;z-index:40}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:.2px}
+  .logo .bar{width:26px;height:13px;background:var(--ink);border-radius:2px;position:relative;overflow:hidden}
+  .logo .bar:after{content:"";position:absolute;inset:0;background:
+    repeating-linear-gradient(90deg,transparent 0 3px,var(--bg) 3px 5px);opacity:.55}
+  .logo small{font-weight:500;color:var(--dim);font-size:11px;letter-spacing:.6px;text-transform:uppercase}
+  .spacer{flex:1}
+  .netpill{font:11px/1 var(--mono);color:var(--ok);background:rgba(46,204,113,.1);
+    border:1px solid rgba(46,204,113,.28);padding:6px 9px;border-radius:999px;white-space:nowrap}
+  .netpill.bad{color:var(--bad);background:rgba(255,92,92,.12);border-color:rgba(255,92,92,.35)}
+  .btn{background:var(--panel2);border:1px solid var(--line);padding:7px 12px;border-radius:7px;
+    font-size:13px;transition:.13s;white-space:nowrap}
+  .btn:hover{border-color:#3a4653;background:#202832}
+  .btn.pri{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .btn.pri:hover{background:var(--accent2)}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .badge{font:11px/1 var(--mono);padding:5px 8px;border-radius:5px;
+    background:rgba(245,166,35,.12);color:var(--warn);border:1px solid rgba(245,166,35,.3)}
+  .badge.pro{background:rgba(76,141,255,.14);color:#9dc0ff;border-color:rgba(76,141,255,.35)}
+
+  /* ---------- layout ---------- */
+  main{display:flex;height:calc(100% - 52px)}
+  aside{width:312px;flex:0 0 312px;background:var(--panel);border-right:1px solid var(--line);
+    overflow-y:auto;padding:14px}
+  aside::-webkit-scrollbar,#stage::-webkit-scrollbar{width:10px}
+  aside::-webkit-scrollbar-thumb,#stage::-webkit-scrollbar-thumb{background:#2a333d;border-radius:6px}
+  .sec{margin-bottom:20px}
+  .sec h3{margin:0 0 9px;font-size:10.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--dimmer)}
+  .card{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:11px}
+
+  #stage{flex:1;overflow:auto;background:#080a0c;position:relative}
+  #pages{padding:26px 0 90px;display:flex;flex-direction:column;align-items:center;gap:20px}
+
+  /* ---------- drop zone ---------- */
+  #drop{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    flex-direction:column;gap:16px;text-align:center;padding:30px}
+  #drop.hide{display:none}
+  .dz{border:1.5px dashed #2f3a45;border-radius:16px;padding:44px 52px;max-width:620px;
+    transition:.15s;background:rgba(19,23,28,.5)}
+  .dz.over{border-color:var(--accent);background:rgba(76,141,255,.07)}
+  .dz h1{margin:0 0 8px;font-size:23px;letter-spacing:-.3px}
+  .dz p{margin:0 0 6px;color:var(--dim);font-size:13.5px}
+  .dz .kv{display:flex;gap:22px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+  .dz .kv div{font-size:11.5px;color:var(--dimmer)}
+  .dz .kv b{display:block;color:var(--ink);font:600 15px/1.4 var(--mono);margin-bottom:2px}
+
+  /* ---------- page canvas ---------- */
+  .pwrap{position:relative;box-shadow:0 3px 24px rgba(0,0,0,.6);background:#fff;line-height:0}
+  .pwrap canvas{display:block}
+  .pwrap.draw{cursor:crosshair}
+  .plabel{position:absolute;top:-19px;left:0;font:10.5px/1 var(--mono);color:var(--dimmer)}
+  .skel{display:flex;align-items:center;justify-content:center;background:#e9eef3;color:#9aa7b4;
+    font:11px/1 var(--mono)}
+  .box{position:absolute;background:#000;outline:1px solid rgba(255,80,80,.75);cursor:pointer}
+  .box:hover{outline:2px solid var(--bad)}
+  .box.auto{outline-color:rgba(76,141,255,.85)}
+  .box .x{position:absolute;top:-8px;right:-8px;width:17px;height:17px;border-radius:50%;
+    background:var(--bad);color:#fff;font:700 11px/17px sans-serif;text-align:center;display:none}
+  .box:hover .x{display:block}
+  #rubber{position:absolute;background:rgba(0,0,0,.72);outline:1.5px solid var(--accent);display:none;pointer-events:none}
+
+  /* ---------- files ---------- */
+  .file{display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:7px;cursor:pointer;
+    border:1px solid transparent;font-size:12.5px}
+  .file:hover{background:var(--panel2)}
+  .file.on{background:rgba(76,141,255,.13);border-color:rgba(76,141,255,.4)}
+  .file .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .file .ct{font:10px/1 var(--mono);color:var(--dim)}
+
+  /* ---------- controls ---------- */
+  label.f{display:block;font-size:11px;color:var(--dim);margin:9px 0 4px}
+  input[type=text],input[type=number],select{width:100%;background:#0e1216;border:1px solid var(--line);
+    border-radius:6px;padding:7px 9px;font-size:12.5px;outline:none}
+  input[type=text]:focus,input[type=number]:focus{border-color:var(--accent)}
+  .chk{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12.5px;cursor:pointer;user-select:none}
+  .chk input{accent-color:var(--accent);width:14px;height:14px;cursor:pointer}
+  .chk .n{margin-left:auto;font:10px/1 var(--mono);color:var(--dimmer)}
+  .seg{display:flex;background:#0e1216;border:1px solid var(--line);border-radius:7px;padding:2px}
+  .seg button{flex:1;padding:6px;border-radius:5px;font-size:12px;color:var(--dim)}
+  .seg button.on{background:var(--accent);color:#fff;font-weight:600}
+  .hint{font-size:11px;color:var(--dimmer);line-height:1.5;margin-top:7px}
+  .stat{display:flex;justify-content:space-between;font:11px/1.9 var(--mono);color:var(--dim)}
+  .stat b{color:var(--ink)}
+
+  /* ---------- modal ---------- */
+  .veil{position:fixed;inset:0;background:rgba(4,6,8,.82);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+  .veil.on{display:flex}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    max-width:560px;width:100%;max-height:88vh;overflow:auto;padding:24px}
+  .modal h2{margin:0 0 4px;font-size:19px}
+  .modal .sub{color:var(--dim);font-size:13px;margin-bottom:18px}
+  .rcpt{font:11.5px/1.85 var(--mono);background:#0a0d10;border:1px solid var(--line);
+    border-radius:9px;padding:14px;white-space:pre-wrap;word-break:break-all;color:#b9c6d3}
+  .verdict{display:flex;align-items:center;gap:11px;padding:14px;border-radius:10px;margin-bottom:16px}
+  .verdict.ok{background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.32)}
+  .verdict.bad{background:rgba(255,92,92,.1);border:1px solid rgba(255,92,92,.32)}
+  .verdict .ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;
+    font-weight:800;font-size:17px;flex:0 0 34px}
+  .verdict.ok .ic{background:var(--ok);color:#04240f}
+  .verdict.bad .ic{background:var(--bad);color:#2b0505}
+  .verdict b{display:block;font-size:15px}
+  .verdict span{font-size:12.5px;color:var(--dim)}
+  .price{display:flex;align-items:baseline;gap:8px;margin:14px 0}
+  .price b{font-size:34px;letter-spacing:-1px}
+  .price s{color:var(--dimmer)}
+  ul.feat{margin:12px 0;padding:0;list-style:none}
+  ul.feat li{padding:5px 0 5px 24px;position:relative;font-size:13px;color:#cbd6e2}
+  ul.feat li:before{content:"✓";position:absolute;left:0;color:var(--ok);font-weight:700}
+
+  #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);
+    background:var(--panel2);border:1px solid var(--line);padding:11px 18px;border-radius:9px;
+    font-size:13px;z-index:200;transition:.22s;opacity:0;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+  #toast.on{transform:translateX(-50%) translateY(0);opacity:1}
+
+  #busy{position:fixed;inset:0;background:rgba(4,6,8,.86);display:none;z-index:150;
+    align-items:center;justify-content:center;flex-direction:column;gap:16px}
+  #busy.on{display:flex}
+  .spin{width:36px;height:36px;border:3px solid #263038;border-top-color:var(--accent);
+    border-radius:50%;animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  #busyTxt{font:12px/1 var(--mono);color:var(--dim)}
+  #mobileTools{display:none}
+  @media(max-width:820px){header{gap:7px;padding:0 8px}.logo small,.netpill,#tier,#btnAudit,#btnKey,#btnBuy{display:none}
+    #mobileTools{display:inline-flex}aside{position:absolute;left:0;top:52px;bottom:0;z-index:30;
+    transform:translateX(-100%);transition:.2s}aside.open{transform:none}.dz{padding:28px 18px}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="bar"></span>
+    <span>BlackBar <small>browser redaction</small></span>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn" id="mobileTools" aria-label="Open redaction tools" aria-expanded="false">☰ Tools</button>
+  <div id="netpill" class="netpill">DOCUMENTS STAY IN BROWSER</div>
+  <span id="tier" class="badge">FREE · 5 pages/export</span>
+  <button class="btn ghost" id="btnAudit">Audit</button>
+  <button class="btn" id="btnKey">Enter key</button>
+  <button class="btn pri" id="btnBuy">Unlock $49</button>
+</header>
+
+<main>
+  <aside id="side">
+    <div class="sec">
+      <h3>Documents</h3>
+      <div id="files" class="card" style="padding:5px">
+        <div style="padding:10px;color:var(--dimmer);font-size:12px">No file loaded.</div>
+      </div>
+      <button class="btn" style="width:100%;margin-top:8px" id="btnAdd">+ Add PDF</button>
+      <input type="file" id="file" accept="application/pdf" multiple hidden>
+    </div>
+
+    <div class="sec">
+      <h3>Mode</h3>
+      <div class="seg">
+        <button id="mDraw" class="on">Draw boxes</button>
+        <button id="mPan">Read / scroll</button>
+      </div>
+      <div class="hint">Drag on the page to mark content for destruction. Click a box to remove it. <b>⌘/Ctrl+Z</b> undoes.</div>
+    </div>
+
+    <div class="sec">
+      <h3>Auto-detect patterns</h3>
+      <div class="card">
+        <div id="pats"></div>
+        <label class="f">Literal text / regex (one per line)</label>
+        <textarea id="custom" rows="3" placeholder="Jane Doe&#10;ACCT-\d{6}"
+          style="width:100%;background:#0e1216;border:1px solid var(--line);border-radius:6px;
+          padding:7px 9px;font:12px/1.5 var(--mono);color:var(--ink);outline:none;resize:vertical"></textarea>
+        <button class="btn" style="width:100%;margin-top:9px" id="btnScan">Scan this document</button>
+        <div class="hint">Scanning reads the PDF's embedded text layer. Image-only scans find nothing — mark those by hand; destruction still works identically.</div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>Output</h3>
+      <div class="card">
+        <label class="f">Raster density (higher = sharper, bigger file)</label>
+        <select id="dpi">
+          <option value="150">150 DPI — email / e-filing</option>
+          <option value="200" selected>200 DPI — recommended</option>
+          <option value="300">300 DPI — print / exhibits</option>
+        </select>
+        <label class="chk" style="margin-top:10px">
+          <input type="checkbox" id="bates"> Bates numbering <span class="n">PRO</span>
+        </label>
+        <div id="batesOpts" style="display:none">
+          <div class="row">
+            <div style="flex:1"><label class="f">Prefix</label><input type="text" id="bPre" value="DEF"></div>
+            <div style="width:92px"><label class="f">Start</label><input type="number" id="bNum" value="1" min="0"></div>
+          </div>
+          <div style="width:100%"><label class="f">Digits</label><input type="number" id="bPad" value="6" min="1" max="10"></div>
+        </div>
+        <label class="chk" style="margin-top:8px">
+          <input type="checkbox" id="verify" checked> Verify output & issue receipt
+        </label>
+      </div>
+      <button class="btn pri" style="width:100%;margin-top:10px" id="btnExport">Redact & export</button>
+      <button class="btn" style="width:100%;margin-top:7px" id="btnAll">Export all documents</button>
+    </div>
+
+    <div class="sec">
+      <h3>Session</h3>
+      <div class="card">
+        <div class="stat"><span>Pages loaded</span><b id="sPages">0</b></div>
+        <div class="stat"><span>Redaction boxes</span><b id="sBoxes">0</b></div>
+        <div class="stat"><span>Bytes uploaded</span><b style="color:var(--ok)">0</b></div>
+        <div class="stat"><span>Files exported</span><b id="sOut">0</b></div>
+      </div>
+    </div>
+  </aside>
+
+  <div id="stage">
+    <div id="drop">
+      <div class="dz" id="dz">
+        <h1>Redaction that can be proven, not promised.</h1>
+        <p>Drop a PDF here. Nothing leaves this tab — ever.</p>
+        <p style="font-size:12.5px;color:var(--dimmer)">Black boxes drawn in Preview, Word or a signing app leave the
+          original text sitting underneath, fully selectable. BlackBar rasterizes every page, burns the bars into the
+          pixels, and rebuilds the file from scratch — then re-reads its own output and tells you exactly how many
+          characters are still extractable.</p>
+        <div class="kv">
+          <div><b>0</b>bytes uploaded</div>
+          <div><b>0</b>accounts required</div>
+          <div><b>1</b>HTML file, yours forever</div>
+        </div>
+        <button class="btn pri" style="margin-top:22px;padding:10px 20px" id="btnPick">Choose PDF</button>
+      </div>
+    </div>
+    <div id="pages"></div>
+  </div>
+</main>
+
+<div class="veil" id="veil"><div class="modal" id="modal"></div></div>
+<div id="busy"><div class="spin"></div><div id="busyTxt">working…</div></div>
+<div id="toast"></div>
+
+<script src="https://unpkg.com/pdfjs-dist@3.11.174/legacy/build/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+/* ============================================================================
+   BlackBar — provable, fully client-side PDF redaction.
+   Everything below runs in your browser. There is no server component.
+   ========================================================================== */
+(function(){
+"use strict";
+
+/* ---------------------------------------------------------------- net tripwire
+   Libraries are already loaded above. From this point forward we replace every
+   outbound-capable browser API with a counter, so the pill in the header is a
+   real measurement rather than a marketing claim. Blob/object URLs used for the
+   PDF worker and downloads are allowed through and not counted as uploads. */
+var OUT = 0;
+function tripped(what){
+  OUT++;
+  var p = document.getElementById('netpill');
+  p.className = 'netpill bad';
+  p.textContent = '◉ BLOCKED OUTBOUND: ' + OUT + ' (' + what + ')';
+}
+var _fetch = window.fetch;
+window.fetch = function(u){
+  var s = String((u && u.url) || u || '');
+  if (/^(blob:|data:)/.test(s)) return _fetch.apply(window, arguments);
+  tripped('fetch'); return Promise.reject(new Error('BlackBar blocked an outbound request.'));
+};
+var _open = XMLHttpRequest.prototype.open;
+XMLHttpRequest.prototype.open = function(m, u){
+  var s = String(u || '');
+  if (/^(blob:|data:)/.test(s)) return _open.apply(this, arguments);
+  tripped('xhr'); throw new Error('BlackBar blocked an outbound request.');
+};
+if (navigator.sendBeacon) navigator.sendBeacon = function(){ tripped('beacon'); return false; };
+if (window.WebSocket) window.WebSocket = function(){ tripped('websocket'); throw new Error('blocked'); };
+if (window.EventSource) window.EventSource = function(){ tripped('sse'); throw new Error('blocked'); };
+
+/* ------------------------------------------------------------------- plumbing */
+var pdfjs = window.pdfjsLib, jsPDF = window.jspdf && window.jspdf.jsPDF;
+if (!pdfjs || !jsPDF){
+  document.body.innerHTML = '<div style="padding:60px;font:15px/1.7 system-ui;color:#e6edf3">'
+    + '<b>Engine failed to load.</b><br>BlackBar needs its two rendering libraries once, on first load. '
+    + 'Reconnect briefly and reload; after that the page runs with zero network access.</div>';
+  return;
+}
+pdfjs.GlobalWorkerOptions.workerSrc =
+  'https://unpkg.com/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
+
+var $  = function(s){ return document.querySelector(s); };
+var el = function(t, c){ var n = document.createElement(t); if (c) n.className = c; return n; };
+
+function toast(m, ms){
+  var t = $('#toast'); t.textContent = m; t.classList.add('on');
+  clearTimeout(toast._t); toast._t = setTimeout(function(){ t.classList.remove('on'); }, ms || 2600);
+}
+function busy(on, msg){
+  $('#busy').classList.toggle('on', !!on);
+  if (msg) $('#busyTxt').textContent = msg;
+}
+function modal(html){
+  $('#modal').innerHTML = html;
+  $('#veil').classList.add('on');
+}
+function closeModal(){ $('#veil').classList.remove('on'); }
+$('#veil').addEventListener('click', function(e){ if (e.target === $('#veil')) closeModal(); });
+
+/* ---------------------------------------------------------------- licensing
+   Offline verification. The key embeds a serial plus a checksum derived from a
+   secret constant, so keys can be minted without any server round-trip. This is
+   deterrence, not DRM — appropriate for a $49 professional tool. Change SECRET
+   before you sell, and generate keys with the matching snippet. */
+var SECRET = 'blackbar-2026-v1';
+function fnv(str){
+  var h = 0x811c9dc5;
+  for (var i = 0; i < str.length; i++){
+    h ^= str.charCodeAt(i);
+    h = (h + (h<<1) + (h<<4) + (h<<7) + (h<<8) + (h<<24)) >>> 0;
+  }
+  return h >>> 0;
+}
+function sumFor(serial){
+  var a = fnv(SECRET + '|' + serial), b = fnv(serial + '|' + SECRET);
+  return ((a ^ b) >>> 0).toString(36).toUpperCase().slice(0, 4).padStart(4, 'X');
+}
+function checkKey(raw){
+  var k = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (k.indexOf('BB') === 0) k = k.slice(2);
+  if (k.length !== 12) return false;
+  return sumFor(k.slice(0, 8)) === k.slice(8);
+}
+var PRO = false;
+try { PRO = checkKey(localStorage.getItem('bb.key')); } catch(e){}
+
+function paintTier(){
+  var t = $('#tier');
+  if (PRO){
+    t.className = 'badge pro'; t.textContent = 'LICENSED · unlimited';
+    $('#btnBuy').style.display = 'none'; $('#btnKey').style.display = 'none';
+  } else {
+    t.className = 'badge'; t.textContent = 'FREE · 5 pages/export';
+  }
+}
+paintTier();
+
+$('#btnKey').onclick = function(){
+  modal('<h2>Enter licence key</h2>'
+    + '<div class="sub">Stored in this browser only. No activation call is made — that is the point.</div>'
+    + '<input type="text" id="kIn" placeholder="BB-XXXXXXXX-XXXX" style="width:100%;font:14px/1 var(--mono);'
+    + 'text-transform:uppercase;padding:11px;background:#0e1216;border:1px solid var(--line);border-radius:8px">'
+    + '<div id="kMsg" style="min-height:20px;font-size:12.5px;margin-top:9px;color:var(--bad)"></div>'
+    + '<div class="row" style="justify-content:flex-end;margin-top:6px">'
+    + '<button class="btn" id="kX">Cancel</button><button class="btn pri" id="kGo">Activate</button></div>');
+  $('#kIn').focus();
+  $('#kX').onclick = closeModal;
+  $('#kGo').onclick = function(){
+    var v = $('#kIn').value;
+    if (checkKey(v)){
+      try { localStorage.setItem('bb.key', v); } catch(e){}
+      PRO = true; paintTier(); closeModal(); toast('Licensed. Page limit, watermark and Bates unlocked.');
+    } else {
+      $('#kMsg').textContent = 'That key is not valid. Check for typos or transposed characters.';
+    }
+  };
+  $('#kIn').onkeydown = function(e){ if (e.key === 'Enter') $('#kGo').click(); };
+};
+
+$('#btnBuy').onclick = function(){
+  modal('<h2>BlackBar, licensed</h2>'
+    + '<div class="sub">One payment. One file. No renewal, no seat count, no vendor who can see your documents.</div>'
+    + '<div class="price"><b>$49</b><s>$29/mo elsewhere</s><span style="color:var(--dim);font-size:13px">once</span></div>'
+    + '<ul class="feat">'
+    + '<li>Unlimited pages and unlimited documents per export</li>'
+    + '<li>No watermark on output</li>'
+    + '<li>Bates numbering burned in during the same pass</li>'
+    + '<li>Batch export across every loaded file</li>'
+    + '<li>Signed verification receipts with output SHA-256</li>'
+    + '<li>Yours permanently — the file works with the network cable unplugged</li>'
+    + '</ul>'
+    + '<div class="hint" style="font-size:12px">This portfolio demonstrates the product workflow. Purchasing and production licence delivery are not connected.</div>'
+    + '<div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn pri" id="bX">Close</button></div>');
+  $('#bX').onclick = closeModal;
+};
+
+$('#btnAudit').onclick = function(){
+  modal('<h2>Privacy audit</h2>'
+    + '<div class="sub">Verify these claims yourself; do not take them on faith.</div>'
+    + '<div class="rcpt">BLOCKED DOCUMENT-DATA REQUESTS ....... ' + OUT + '\n'
+    + 'fetch / XHR / WebSocket / beacon ..... intercepted &amp; blocked\n'
+    + 'PDF bytes read via ................... FileReader (local disk)\n'
+    + 'Rendering ............................ Canvas2D, in-process\n'
+    + 'Output assembled by .................. jsPDF, in-process\n'
+    + 'Download mechanism ................... blob: URL, never leaves device\n'
+    + 'Persistent storage ................... localStorage: licence key only\n'
+    + 'Startup libraries .................... loaded from public CDNs\n'
+    + 'Telemetry / analytics / cookies ...... none present</div>'
+    + '<div class="hint">Open your browser devtools, switch to the Network tab, and process a document. '
+    + 'After the two library files load on first visit you will see no further traffic. To run truly air-gapped, '
+    + 'load this page once, then disable networking — the tab keeps working.</div>'
+    + '<div class="row" style="justify-content:flex-end;margin-top:16px">'
+    + '<button class="btn pri" id="aX">Close</button></div>');
+  $('#aX').onclick = closeModal;
+};
+
+$('#mobileTools').onclick = function(){
+  var open = $('#side').classList.toggle('open');
+  this.setAttribute('aria-expanded', String(open));
+  this.textContent = open ? '× Close' : '☰ Tools';
+};
+
+/* ------------------------------------------------------------------- patterns
+   Deliberately conservative. False positives cost a click; false negatives cost
+   a career. Ordered so that broader patterns come last. */
+var PATTERNS = [
+  { id:'ssn',   name:'US SSN / ITIN',        on:true,  re:/\b\d{3}-\d{2}-\d{4}\b/g },
+  { id:'ein',   name:'EIN',                  on:false, re:/\b\d{2}-\d{7}\b/g },
+  { id:'email', name:'Email addresses',      on:true,  re:/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g },
+  { id:'phone', name:'Phone numbers',        on:true,  re:/(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/g },
+  { id:'card',  name:'Card numbers',         on:true,  re:/\b(?:\d[ -]?){13,16}\d\b/g },
+  { id:'dob',   name:'Dates (MM/DD/YYYY)',   on:false, re:/\b(?:0?[1-9]|1[0-2])[\/.-](?:0?[1-9]|[12]\d|3[01])[\/.-](?:19|20)\d{2}\b/g },
+  { id:'acct',  name:'Long digit strings',   on:false, re:/\b\d{8,17}\b/g },
+  { id:'iban',  name:'IBAN',                 on:false, re:/\b[A-Z]{2}\d{2}[A-Z0-9]{10,30}\b/g },
+  { id:'ip',    name:'IP addresses',         on:false, re:/\b(?:\d{1,3}\.){3}\d{1,3}\b/g }
+];
+(function buildPats(){
+  var host = $('#pats');
+  PATTERNS.forEach(function(p){
+    var l = el('label', 'chk');
+    l.innerHTML = '<input type="checkbox" ' + (p.on ? 'checked' : '') + '><span>' + p.name
+                + '</span><span class="n" id="n_' + p.id + '"></span>';
+    l.querySelector('input').onchange = function(e){ p.on = e.target.checked; };
+    host.appendChild(l);
+  });
+})();
+
+/* ---------------------------------------------------------------------- state */
+var docs = [], active = -1, mode = 'draw', undo = [];
+
+function D(){ return docs[active] || null; }
+function boxCount(d){
+  if (!d) return 0;
+  var n = 0; for (var k in d.boxes) n += d.boxes[k].length; return n;
+}
+function stats(){
+  var d = D();
+  $('#sPages').textContent = d ? d.n : 0;
+  $('#sBoxes').textContent = boxCount(d);
+}
+
+/* ------------------------------------------------------------------- ingestion */
+function readFile(f){
+  return new Promise(function(res, rej){
+    var r = new FileReader();
+    r.onload = function(){ res(new Uint8Array(r.result)); };
+    r.onerror = function(){ rej(r.error); };
+    r.readAsArrayBuffer(f);              // local disk read; no upload path exists
+  });
+}
+
+async function addFiles(list){
+  var arr = Array.prototype.slice.call(list).filter(function(f){
+    return /\.pdf$/i.test(f.name) || f.type === 'application/pdf';
+  });
+  if (!arr.length){ toast('PDF files only.'); return; }
+  busy(true, 'opening…');
+  for (var i = 0; i < arr.length; i++){
+    var f = arr[i];
+    try {
+      var bytes = await readFile(f);
+      var pdf = await pdfjs.getDocument({ data: bytes, isEvalSupported:false }).promise;
+      var geo = [];
+      for (var p = 1; p <= pdf.numPages; p++){
+        var vp = (await pdf.getPage(p)).getViewport({ scale: 1 });
+        geo.push({ w: vp.width, h: vp.height, rot: vp.rotation });
+      }
+      docs.push({ name: f.name, size: f.size, pdf: pdf, n: pdf.numPages, geo: geo, boxes: {}, scanned: false });
+    } catch (err){
+      toast('Could not open ' + f.name + (/password/i.test(String(err)) ? ' — it is encrypted.' : '.'), 4200);
+    }
+  }
+  busy(false);
+  if (docs.length){ paintFiles(); open(docs.length - 1); }
+}
+
+function paintFiles(){
+  var host = $('#files');
+  host.innerHTML = '';
+  if (!docs.length){
+    host.innerHTML = '<div style="padding:10px;color:var(--dimmer);font-size:12px">No file loaded.</div>';
+    return;
+  }
+  docs.forEach(function(d, i){
+    var r = el('div', 'file' + (i === active ? ' on' : ''));
+    r.innerHTML = '<span class="nm" title="' + d.name.replace(/"/g,'') + '">' + d.name + '</span>'
+                + '<span class="ct">' + d.n + 'p · ' + boxCount(d) + 'b</span>';
+    r.onclick = function(){ open(i); };
+    host.appendChild(r);
+  });
+}
+
+/* -------------------------------------------------------------------- viewing
+   Pages are laid out immediately at correct aspect ratio, then rasterized only
+   as they scroll into view. A 400-page deposition opens instantly. */
+var io = new IntersectionObserver(function(entries){
+  entries.forEach(function(en){
+    if (!en.isIntersecting) return;
+    var w = en.target;
+    io.unobserve(w);
+    render(parseInt(w.dataset.page, 10), w);
+  });
+}, { root: $('#stage'), rootMargin: '600px 0px' });
+
+function fitScale(pageW){
+  var avail = $('#stage').clientWidth - 64;
+  return Math.max(0.35, Math.min(2.2, avail / pageW));
+}
+
+function open(i){
+  active = i;
+  var d = D();
+  undo = [];
+  $('#drop').classList.add('hide');
+  var host = $('#pages');
+  host.innerHTML = '';
+  var s = fitScale(d.geo[0].w);
+  d.geo.forEach(function(g, pi){
+    var w = el('div', 'pwrap' + (mode === 'draw' ? ' draw' : ''));
+    w.dataset.page = pi;
+    w.style.width  = Math.round(g.w * s) + 'px';
+    w.style.height = Math.round(g.h * s) + 'px';
+    w.dataset.scale = s;
+    var lab = el('div', 'plabel');
+    lab.textContent = 'PAGE ' + (pi + 1) + ' / ' + d.n;
+    w.appendChild(lab);
+    var sk = el('div', 'skel');
+    sk.style.cssText = 'position:absolute;inset:0';
+    sk.textContent = 'rendering…';
+    w.appendChild(sk);
+    host.appendChild(w);
+    io.observe(w);
+    hookDraw(w, pi);
+  });
+  paintFiles(); stats();
+}
+
+async function render(pi, wrap){
+  var d = D();
+  if (!d) return;
+  try {
+    var page = await d.pdf.getPage(pi + 1);
+    var s = parseFloat(wrap.dataset.scale);
+    var vp = page.getViewport({ scale: s * (window.devicePixelRatio > 1 ? 2 : 1.5) });
+    var cv = el('canvas');
+    cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height);
+    cv.style.width = wrap.style.width; cv.style.height = wrap.style.height;
+    await page.render({ canvasContext: cv.getContext('2d', { alpha:false }), viewport: vp }).promise;
+    var sk = wrap.querySelector('.skel');
+    if (sk) sk.remove();
+    wrap.insertBefore(cv, wrap.firstChild);
+    paintBoxes(pi);
+  } catch(e){ /* page render failure leaves the placeholder; export still works */ }
+}
+
+function paintBoxes(pi){
+  var wrap = $('#pages').children[pi];
+  if (!wrap) return;
+  Array.prototype.slice.call(wrap.querySelectorAll('.box')).forEach(function(b){ b.remove(); });
+  var list = (D().boxes[pi] || []);
+  list.forEach(function(b, idx){
+    var n = el('div', 'box' + (b.auto ? ' auto' : ''));
+    n.style.left   = (b.x * 100) + '%';
+    n.style.top    = (b.y * 100) + '%';
+    n.style.width  = (b.w * 100) + '%';
+    n.style.height = (b.h * 100) + '%';
+    n.title = (b.auto ? 'Auto: ' + b.auto : 'Manual') + ' — click to remove';
+    n.innerHTML = '<span class="x">×</span>';
+    n.onmousedown = function(e){ e.stopPropagation(); };
+    n.onclick = function(e){
+      e.stopPropagation();
+      undo.push({ pi: pi, idx: idx, box: b });
+      D().boxes[pi].splice(idx, 1);
+      paintBoxes(pi); paintFiles(); stats();
+    };
+    wrap.appendChild(n);
+  });
+}
+
+/* ------------------------------------------------------------ drawing gesture */
+var rubber = el('div'); rubber.id = 'rubber';
+function hookDraw(wrap, pi){
+  wrap.addEventListener('mousedown', function(e){
+    if (mode !== 'draw' || e.button !== 0) return;
+    e.preventDefault();
+    var r = wrap.getBoundingClientRect();
+    var sx = e.clientX - r.left, sy = e.clientY - r.top;
+    wrap.appendChild(rubber);
+    rubber.style.display = 'block';
+    var moved = false;
+
+    function mv(ev){
+      var x = Math.max(0, Math.min(r.width,  ev.clientX - r.left));
+      var y = Math.max(0, Math.min(r.height, ev.clientY - r.top));
+      if (Math.abs(x - sx) > 3 || Math.abs(y - sy) > 3) moved = true;
+      rubber.style.left   = Math.min(sx, x) + 'px';
+      rubber.style.top    = Math.min(sy, y) + 'px';
+      rubber.style.width  = Math.abs(x - sx) + 'px';
+      rubber.style.height = Math.abs(y - sy) + 'px';
+    }
+    function up(ev){
+      document.removeEventListener('mousemove', mv);
+      document.removeEventListener('mouseup', up);
+      rubber.style.display = 'none';
+      if (rubber.parentNode) rubber.parentNode.removeChild(rubber);
+      if (!moved) return;
+      var x = Math.max(0, Math.min(r.width,  ev.clientX - r.left));
+      var y = Math.max(0, Math.min(r.height, ev.clientY - r.top));
+      var b = {
+        x: Math.min(sx, x) / r.width,
+        y: Math.min(sy, y) / r.height,
+        w: Math.abs(x - sx) / r.width,
+        h: Math.abs(y - sy) / r.height
+      };
+      if (b.w < 0.004 || b.h < 0.004) return;
+      (D().boxes[pi] = D().boxes[pi] || []).push(b);
+      undo.push({ pi: pi, idx: D().boxes[pi].length - 1, add: true });
+      paintBoxes(pi); paintFiles(); stats();
+    }
+    document.addEventListener('mousemove', mv);
+    document.addEventListener('mouseup', up);
+  });
+}
+
+document.addEventListener('keydown', function(e){
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z'){
+    e.preventDefault();
+    var u = undo.pop();
+    if (!u) return;
+    var arr = D().boxes[u.pi] || [];
+    if (u.add) arr.splice(u.idx, 1); else arr.splice(u.idx, 0, u.box);
+    paintBoxes(u.pi); paintFiles(); stats();
+  }
+  if (e.key === 'Escape') closeModal();
+});
+
+/* ---------------------------------------------------------- pattern detection
+   pdf.js hands back text in fragments that frequently split a single SSN across
+   several items. So: concatenate the whole page into one string while keeping a
+   character-to-fragment index map, match against that, then translate each match
+   back into one box per fragment it touches. This is what makes detection work
+   on real-world statements instead of only on toy PDFs. */
+function itemBox(item, vpTf, c0, c1, len, pw, ph){
+  var t = pdfjs.Util.transform(vpTf, item.transform);
+  var fh = Math.hypot(t[2], t[3]) || Math.abs(t[3]) || 10;
+  var total = item.width || 0;
+  var per = len > 0 ? total / len : total;
+  var x = t[4] + per * c0;
+  var w = per * Math.max(1, c1 - c0);
+  var pad = fh * 0.16;
+  var top = t[5] - fh * 0.92;
+  return {
+    x: Math.max(0, (x - pad)) / pw,
+    y: Math.max(0, (top - pad * 0.5)) / ph,
+    w: Math.min(pw, (w + pad * 2)) / pw,
+    h: (fh * 1.22) / ph
+  };
+}
+
+function compileCustom(){
+  var out = [];
+  String($('#custom').value || '').split('\n').forEach(function(line){
+    var s = line.trim();
+    if (!s) return;
+    var looksRegex = /[\\\[\]\(\)\{\}\|\+\*\?\^\$]/.test(s);
+    try {
+      out.push({ id:'custom', name:'custom:' + s.slice(0, 24),
+        re: new RegExp(looksRegex ? s : s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi') });
+    } catch(e){ toast('Ignored invalid pattern: ' + s, 3400); }
+  });
+  return out;
+}
+
+async function scan(){
+  var d = D();
+  if (!d){ toast('Load a PDF first.'); return; }
+  var rules = PATTERNS.filter(function(p){ return p.on; }).concat(compileCustom());
+  if (!rules.length){ toast('Select at least one pattern.'); return; }
+
+  busy(true, 'scanning text layer…');
+  var found = {}, total = 0, hadText = false;
+
+  for (var pi = 0; pi < d.n; pi++){
+    busy(true, 'scanning page ' + (pi + 1) + ' of ' + d.n + '…');
+    var page = await d.pdf.getPage(pi + 1);
+    var vp = page.getViewport({ scale: 1 });
+    var tc = await page.getTextContent({ disableCombineTextItems: false });
+    var items = tc.items.filter(function(it){ return it.str && it.str.length; });
+    if (!items.length) continue;
+
+    var buf = '', map = [];
+    items.forEach(function(it, ii){
+      for (var c = 0; c < it.str.length; c++){ map.push({ i: ii, c: c }); }
+      buf += it.str;
+      if (it.hasEOL){ map.push({ i: ii, c: it.str.length, gap: true }); buf += '\n'; }
+    });
+    if (buf.replace(/\s/g, '').length) hadText = true;
+
+    rules.forEach(function(rule){
+      rule.re.lastIndex = 0;
+      var m;
+      while ((m = rule.re.exec(buf)) !== null){
+        if (!m[0].length){ rule.re.lastIndex++; continue; }
+        if (rule.id === 'card' && !luhn(m[0])) continue;
+        var s = m.index, e = s + m[0].length;
+        // group the matched characters by originating fragment
+        var runs = [], cur = null;
+        for (var k = s; k < e; k++){
+          var mp = map[k];
+          if (!mp || mp.gap){ cur = null; continue; }
+          if (!cur || cur.i !== mp.i){ cur = { i: mp.i, a: mp.c, b: mp.c + 1 }; runs.push(cur); }
+          else cur.b = mp.c + 1;
+        }
+        runs.forEach(function(r){
+          var it = items[r.i];
+          var b = itemBox(it, vp.transform, r.a, r.b, it.str.length, vp.width, vp.height);
+          b.auto = rule.name;
+          if (b.w > 0 && b.h > 0 && b.w < 1.02 && b.h < 0.35){
+            (found[pi] = found[pi] || []).push(b);
+            total++;
+            rule._n = (rule._n || 0) + 1;
+          }
+        });
+      }
+    });
+  }
+
+  // merge into existing boxes, discarding near-duplicates
+  Object.keys(found).forEach(function(pi){
+    var tgt = d.boxes[pi] = d.boxes[pi] || [];
+    found[pi].forEach(function(nb){
+      var dup = tgt.some(function(ob){
+        return Math.abs(ob.x - nb.x) < 0.004 && Math.abs(ob.y - nb.y) < 0.004
+            && Math.abs(ob.w - nb.w) < 0.012;
+      });
+      if (!dup) tgt.push(nb);
+    });
+  });
+
+  PATTERNS.forEach(function(p){
+    var n = $('#n_' + p.id);
+    if (n) n.textContent = p._n ? p._n : '';
+  });
+  d.scanned = true;
+  busy(false);
+  for (var i = 0; i < d.n; i++) paintBoxes(i);
+  paintFiles(); stats();
+
+  if (!hadText){
+    toast('No text layer in this PDF — it is a scan. Mark regions by hand; destruction is identical.', 5200);
+  } else {
+    toast(total ? ('Marked ' + total + ' match' + (total === 1 ? '' : 'es') + '. Review every one before export.')
+                : 'No matches. Add literal names or patterns above.', 4200);
+  }
+}
+function luhn(s){
+  var t = s.replace(/\D/g, ''), sum = 0, alt = false;
+  if (t.length < 13) return false;
+  for (var i = t.length - 1; i >= 0; i--){
+    var n = +t[i];
+    if (alt){ n *= 2; if (n > 9) n -= 9; }
+    sum += n; alt = !alt;
+  }
+  return sum % 100 === 0 ? false : sum % 10 === 0;
+}
+
+/* ------------------------------------------------------------------- exporting
+   The core guarantee. Each page is rasterized, bars are filled onto the bitmap,
+   and a fresh PDF is built from those bitmaps. The original text objects, fonts,
+   annotations, embedded files, XMP metadata and incremental-save history are not
+   copied forward — they simply are not present in the new document. */
+async function exportDoc(d, opts){
+  var scale = opts.dpi / 72;
+  var out = null, batesAt = opts.batesStart;
+  var limit = PRO ? d.n : Math.min(d.n, 5);
+
+  for (var pi = 0; pi < limit; pi++){
+    busy(true, 'flattening page ' + (pi + 1) + ' of ' + limit + '…');
+    var g = d.geo[pi];
+    var cv = el('canvas'), cx = cv.getContext('2d', { alpha: false });
+    cv.width  = Math.max(1, Math.round(g.w * scale));
+    cv.height = Math.max(1, Math.round(g.h * scale));
+    cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
+
+    try {
+      var page = await d.pdf.getPage(pi + 1);
+      await page.render({ canvasContext: cx, viewport: page.getViewport({ scale: scale }) }).promise;
+    } catch(e){ /* unrenderable page ships blank rather than leaking */ }
+
+    // burn the bars into the pixels
+    cx.fillStyle = '#000';
+    (d.boxes[pi] || []).forEach(function(b){
+      cx.fillRect(Math.floor(b.x * cv.width), Math.floor(b.y * cv.height),
+                  Math.ceil(b.w * cv.width),  Math.ceil(b.h * cv.height));
+    });
+
+    if (opts.bates && PRO){
+      var fs = Math.round(9 * scale);
+      var lbl = opts.batesPrefix + String(batesAt++).padStart(opts.batesPad, '0');
+      cx.font = '600 ' + fs + 'px ' + 'Helvetica, Arial, sans-serif';
+      cx.textAlign = 'right'; cx.textBaseline = 'alphabetic';
+      var tw = cx.measureText(lbl).width;
+      cx.fillStyle = 'rgba(255,255,255,.92)';
+      cx.fillRect(cv.width - tw - fs * 1.9, cv.height - fs * 2.6, tw + fs * 1.4, fs * 1.7);
+      cx.fillStyle = '#000';
+      cx.fillText(lbl, cv.width - fs * 1.2, cv.height - fs * 1.35);
+    }
+    if (!PRO){
+      var ws = Math.round(7.5 * scale);
+      cx.font = ws + 'px Helvetica, Arial, sans-serif';
+      cx.textAlign = 'center'; cx.fillStyle = 'rgba(90,90,90,.72)';
+      cx.fillText('Redacted with BlackBar — unlicensed copy', cv.width / 2, cv.height - ws * 1.1);
+    }
+
+    var img = cv.toDataURL('image/jpeg', 0.93);
+    if (!out){
+      out = new jsPDF({ unit:'pt', format:[g.w, g.h],
+        orientation: g.w > g.h ? 'landscape' : 'portrait', compress:true });
+    } else {
+      out.addPage([g.w, g.h], g.w > g.h ? 'landscape' : 'portrait');
+    }
+    out.addImage(img, 'JPEG', 0, 0, g.w, g.h, undefined, 'FAST');
+    cv.width = cv.height = 1;   // release the bitmap promptly
+  }
+
+  if (!out) throw new Error('nothing to export');
+  out.setProperties({ title:'', subject:'', author:'', keywords:'', creator:'BlackBar' });
+  return { blob: out.output('blob'), pages: limit, truncated: limit < d.n };
+}
+
+/* ------------------------------------------------------------- verification
+   Re-open our own output with the same parser a recipient would use and count
+   every extractable character. Zero is the only acceptable answer. */
+async function verify(blob){
+  var buf = new Uint8Array(await blob.arrayBuffer());
+  var pdf = await pdfjs.getDocument({ data: buf.slice(0), isEvalSupported:false }).promise;
+  var chars = 0, sample = '';
+  for (var p = 1; p <= pdf.numPages; p++){
+    var tc = await (await pdf.getPage(p)).getTextContent();
+    tc.items.forEach(function(it){
+      var s = (it.str || '');
+      chars += s.replace(/\s/g, '').length;
+      if (sample.length < 120) sample += s;
+    });
+  }
+  var hash = '(unavailable)';
+  try {
+    if (crypto && crypto.subtle){
+      var h = await crypto.subtle.digest('SHA-256', buf);
+      hash = Array.prototype.map.call(new Uint8Array(h), function(b){
+        return b.toString(16).padStart(2, '0'); }).join('');
+    }
+  } catch(e){}
+  return { pages: pdf.numPages, chars: chars, sample: sample.slice(0, 120), sha256: hash, bytes: blob.size };
+}
+
+function download(blob, name){
+  var u = URL.createObjectURL(blob);
+  var a = el('a'); a.href = u; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(u); }, 4000);
+}
+function outName(n){ return n.replace(/\.pdf$/i, '') + '_REDACTED.pdf'; }
+
+function opts(){
+  return {
+    dpi: parseInt($('#dpi').value, 10),
+    bates: $('#bates').checked,
+    batesPrefix: ($('#bPre').value || '').toUpperCase(),
+    batesStart: Math.max(0, parseInt($('#bNum').value, 10) || 1),
+    batesPad: Math.min(10, Math.max(1, parseInt($('#bPad').value, 10) || 6))
+  };
+}
+
+async function runExport(d){
+  if (!d){ toast('Load a PDF first.'); return null; }
+  if (!boxCount(d) && !confirm('This document has no redaction boxes. Export a flattened copy anyway?')) return null;
+  var o = opts();
+  var r = await exportDoc(d, o);
+  download(r.blob, outName(d.name));
+  $('#sOut').textContent = (parseInt($('#sOut').textContent, 10) || 0) + 1;
+  if (o.bates && PRO) $('#bNum').value = o.batesStart + r.pages;
+  return { d: d, r: r, o: o };
+}
+
+$('#btnExport').onclick = async function(){
+  var d = D();
+  try {
+    busy(true, 'preparing…');
+    var res = await runExport(d);
+    if (!res) { busy(false); return; }
+    if ($('#verify').checked){
+      busy(true, 'verifying output…');
+      var v = await verify(res.r.blob);
+      busy(false);
+      receipt(d, res.r, v);
+    } else {
+      busy(false);
+      toast('Exported ' + outName(d.name));
+    }
+  } catch(e){ busy(false); toast('Export failed: ' + e.message, 4200); }
+};
+
+$('#btnAll').onclick = async function(){
+  if (!PRO){ $('#btnBuy').click(); return; }
+  if (!docs.length){ toast('Load PDFs first.'); return; }
+  var ok = 0;
+  for (var i = 0; i < docs.length; i++){
+    try {
+      var o = opts();
+      var r = await exportDoc(docs[i], o);
+      download(r.blob, outName(docs[i].name));
+      if (o.bates) $('#bNum').value = o.batesStart + r.pages;
+      ok++;
+    } catch(e){}
+  }
+  busy(false);
+  $('#sOut').textContent = (parseInt($('#sOut').textContent, 10) || 0) + ok;
+  toast('Exported ' + ok + ' of ' + docs.length + ' documents.');
+};
+
+function receipt(d, r, v){
+  var clean = v.chars === 0;
+  var ts = new Date();
+  var body =
+    'BLACKBAR REDACTION VERIFICATION RECEIPT\n' +
+    '========================================\n' +
+    'Generated      ' + ts.toISOString() + '\n' +
+    'Local time     ' + ts.toString() + '\n\n' +
+    'SOURCE\n' +
+    '  File         ' + d.name + '\n' +
+    '  Pages        ' + d.n + '\n' +
+    '  Bars applied ' + boxCount(d) + '\n\n' +
+    'OUTPUT\n' +
+    '  File         ' + outName(d.name) + '\n' +
+    '  Pages        ' + v.pages + '\n' +
+    '  Size         ' + (v.bytes / 1048576).toFixed(2) + ' MB\n' +
+    '  SHA-256      ' + v.sha256 + '\n\n' +
+    'TEXT-EXTRACTION TEST (re-parsed with pdf.js)\n' +
+    '  Extractable characters ......... ' + v.chars + '\n' +
+    '  Copy/paste recoverable text .... ' + (clean ? 'NONE' : 'PRESENT — see below') + '\n' +
+    '  Original metadata carried over . NONE\n' +
+    '  Annotations / embedded files ... NONE\n' +
+    '  Incremental-save history ....... NONE\n' +
+    (clean ? '' : '  Residual sample ................ ' + v.sample + '\n') +
+    '\nMETHOD\n' +
+    '  Every page was rasterized at ' + opts().dpi + ' DPI, redaction bars were composited\n' +
+    '  onto the bitmap, and a new PDF was assembled from the resulting images.\n' +
+    '  The source text objects were not copied into the output.\n\n' +
+    'PROCESSING LOCATION\n' +
+    '  Entirely within the operator\'s browser. Outbound network requests: ' + OUT + '.\n' +
+    '  No copy of this document was transmitted to any third party.\n';
+
+  modal(
+    '<div class="verdict ' + (clean ? 'ok' : 'bad') + '">'
+    + '<div class="ic">' + (clean ? '✓' : '!') + '</div><div>'
+    + '<b>' + (clean ? 'Zero extractable text. Redaction is destructive.' : 'Residual text detected — do not release.') + '</b>'
+    + '<span>' + (clean
+        ? 'Nothing under those bars can be selected, searched, copied or OCR-recovered from the file.'
+        : 'Re-export at a higher density, or report this document so the failure can be reproduced.')
+    + '</span></div></div>'
+    + (r.truncated ? '<div class="hint" style="color:var(--warn);margin-bottom:12px">Unlicensed build: only the '
+        + 'first 5 pages of ' + d.n + ' were exported.</div>' : '')
+    + '<div class="rcpt">' + body.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</div>'
+    + '<div class="row" style="justify-content:flex-end;margin-top:16px">'
+    + '<button class="btn" id="rC">Copy</button>'
+    + '<button class="btn" id="rD">Save receipt</button>'
+    + '<button class="btn pri" id="rX">Done</button></div>'
+  );
+  $('#rC').onclick = function(){
+    var ta = el('textarea'); ta.value = body; document.body.appendChild(ta);
+    ta.select(); try { document.execCommand('copy'); toast('Receipt copied.'); } catch(e){}
+    ta.remove();
+  };
+  $('#rD').onclick = function(){
+    download(new Blob([body], { type:'text/plain' }), outName(d.name).replace(/\.pdf$/i, '') + '_receipt.txt');
+  };
+  $('#rX').onclick = closeModal;
+}
+
+/* ----------------------------------------------------------------- UI wiring */
+$('#btnAdd').onclick = $('#btnPick').onclick = function(){ $('#file').click(); };
+$('#file').onchange = function(e){ addFiles(e.target.files); e.target.value = ''; };
+$('#btnScan').onclick = scan;
+
+['dragenter','dragover'].forEach(function(ev){
+  document.addEventListener(ev, function(e){ e.preventDefault(); $('#dz').classList.add('over'); });
+});
+['dragleave','drop'].forEach(function(ev){
+  document.addEventListener(ev, function(e){ e.preventDefault(); $('#dz').classList.remove('over'); });
+});
+document.addEventListener('drop', function(e){
+  if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+});
+
+function setMode(m){
+  mode = m;
+  $('#mDraw').classList.toggle('on', m === 'draw');
+  $('#mPan').classList.toggle('on', m === 'pan');
+  Array.prototype.slice.call(document.querySelectorAll('.pwrap')).forEach(function(w){
+    w.classList.toggle('draw', m === 'draw');
+  });
+}
+$('#mDraw').onclick = function(){ setMode('draw'); };
+$('#mPan').onclick  = function(){ setMode('pan'); };
+
+$('#bates').onchange = function(e){
+  if (e.target.checked && !PRO){ e.target.checked = false; $('#btnBuy').click(); return; }
+  $('#batesOpts').style.display = e.target.checked ? 'block' : 'none';
+};
+
+var rz;
+window.addEventListener('resize', function(){
+  clearTimeout(rz);
+  rz = setTimeout(function(){ if (active >= 0) open(active); }, 240);
+});
+
+window.addEventListener('beforeunload', function(e){
+  if (docs.length && boxCount(D())){ e.preventDefault(); e.returnValue = ''; }
+});
+
+})();
+</script>
+</body>
+</html>

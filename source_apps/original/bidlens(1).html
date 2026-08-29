@@ -1,0 +1,3033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="BidLens commercial cleaning bid calculator and proposal generator">
+<title>BidLens — Commercial Cleaning Bid Calculator</title>
+
+<style>
+:root {
+  color-scheme: dark;
+
+  --bg: #080b0f;
+  --surface: #0f141a;
+  --surface-2: #151b23;
+  --surface-3: #1b232d;
+  --border: rgba(255,255,255,.09);
+
+  --text: #f4f7f9;
+  --muted: #96a1ad;
+  --subtle: #6d7885;
+
+  --green: #5ee0a0;
+  --green-2: #20b978;
+  --blue: #6fa9ff;
+  --orange: #ffb45c;
+  --red: #ff7085;
+
+  --shadow: 0 24px 80px rgba(0,0,0,.36);
+  --radius: 17px;
+}
+
+body.light {
+  color-scheme: light;
+
+  --bg: #f2f5f5;
+  --surface: #ffffff;
+  --surface-2: #f6f8f8;
+  --surface-3: #edf1f1;
+  --border: rgba(14,30,31,.11);
+
+  --text: #102020;
+  --muted: #657474;
+  --subtle: #869292;
+
+  --shadow: 0 22px 60px rgba(27,52,53,.11);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 85% -10%, rgba(94,224,160,.14), transparent 34rem),
+    radial-gradient(circle at 10% 25%, rgba(111,169,255,.07), transparent 26rem),
+    var(--bg);
+  font-family:
+    Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  font-size: 14px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+select {
+  cursor: pointer;
+}
+
+button {
+  color: inherit;
+}
+
+::selection {
+  color: #06120d;
+  background: var(--green);
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(130,145,150,.35);
+}
+
+/* Layout */
+
+.shell {
+  display: grid;
+  grid-template-columns: 245px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 22px 15px;
+  border-right: 1px solid var(--border);
+  background: rgba(9,13,17,.9);
+  backdrop-filter: blur(20px);
+  z-index: 50;
+}
+
+.light .sidebar {
+  background: rgba(255,255,255,.88);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 8px 23px;
+}
+
+.logo-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  color: #06120d;
+  background: linear-gradient(135deg, var(--green), #a6ffd0);
+  box-shadow: 0 12px 32px rgba(94,224,160,.24);
+  font-size: 19px;
+  font-weight: 950;
+}
+
+.logo strong {
+  display: block;
+  font-size: 18px;
+  letter-spacing: -.04em;
+}
+
+.logo small {
+  color: var(--muted);
+}
+
+.navigation {
+  display: grid;
+  gap: 6px;
+}
+
+.navigation button {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: 11px;
+  color: var(--muted);
+  background: transparent;
+  text-align: left;
+  transition: .16s ease;
+}
+
+.navigation button:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.navigation button.active {
+  color: var(--text);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.nav-icon {
+  width: 19px;
+  text-align: center;
+}
+
+.sidebar-spacer {
+  flex: 1;
+}
+
+.privacy-box {
+  padding: 13px;
+  margin: 18px 0 12px;
+  border: 1px solid rgba(94,224,160,.2);
+  border-radius: 13px;
+  color: var(--muted);
+  background: rgba(94,224,160,.06);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.privacy-box strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--green);
+}
+
+.side-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.main {
+  min-width: 0;
+  padding: 28px clamp(18px,4vw,50px) 70px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 26px;
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 7px;
+  font-size: clamp(29px,4vw,44px);
+  line-height: 1.02;
+  letter-spacing: -.06em;
+}
+
+h2 {
+  margin-bottom: 6px;
+  font-size: 21px;
+  letter-spacing: -.035em;
+}
+
+h3 {
+  margin-bottom: 5px;
+  font-size: 15px;
+  letter-spacing: -.015em;
+}
+
+.subtitle,
+.muted {
+  color: var(--muted);
+}
+
+.top-actions,
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Reusable UI */
+
+.view {
+  display: none;
+  animation: appear .2s ease;
+}
+
+.view.active {
+  display: block;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.card {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.018), transparent),
+    var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.section {
+  margin-bottom: 17px;
+  scroll-margin-top: 20px;
+}
+
+.section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 17px;
+}
+
+.grid {
+  display: grid;
+  gap: 15px;
+}
+
+.grid-2 {
+  grid-template-columns: repeat(2,minmax(0,1fr));
+}
+
+.grid-3 {
+  grid-template-columns: repeat(3,minmax(0,1fr));
+}
+
+.grid-4 {
+  grid-template-columns: repeat(4,minmax(0,1fr));
+}
+
+.estimator-layout {
+  display: grid;
+  grid-template-columns: minmax(0,1.45fr) minmax(310px,.55fr);
+  gap: 17px;
+  align-items: start;
+}
+
+.sticky-column {
+  position: sticky;
+  top: 20px;
+}
+
+.btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-height: 39px;
+  padding: 8px 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--surface-2);
+  font-weight: 750;
+  text-decoration: none;
+  transition: transform .15s, border-color .15s, background .15s;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(94,224,160,.42);
+}
+
+.btn.primary {
+  color: #07120d;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--green), #8df0bb);
+  box-shadow: 0 10px 30px rgba(94,224,160,.18);
+}
+
+.btn.danger {
+  color: var(--red);
+  border-color: rgba(255,112,133,.22);
+  background: rgba(255,112,133,.07);
+}
+
+.btn.small {
+  min-height: 33px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.btn.icon {
+  width: 39px;
+  padding: 0;
+}
+
+.mobile-menu {
+  display: none;
+}
+
+label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: none;
+  color: var(--text);
+  background: var(--surface-2);
+  transition: border-color .15s, box-shadow .15s;
+}
+
+textarea {
+  min-height: 95px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: rgba(94,224,160,.65);
+  box-shadow: 0 0 0 3px rgba(94,224,160,.09);
+}
+
+.input-with-suffix {
+  position: relative;
+}
+
+.input-with-suffix input {
+  padding-right: 45px;
+}
+
+.input-with-suffix span {
+  position: absolute;
+  top: 10px;
+  right: 11px;
+  color: var(--subtle);
+  pointer-events: none;
+  font-size: 12px;
+}
+
+.help {
+  margin: 6px 0 0;
+  color: var(--subtle);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--surface-3);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.badge.good {
+  color: var(--green);
+  background: rgba(94,224,160,.09);
+}
+
+.badge.warn {
+  color: var(--orange);
+  background: rgba(255,180,92,.09);
+}
+
+.badge.bad {
+  color: var(--red);
+  background: rgba(255,112,133,.09);
+}
+
+.notice {
+  padding: 13px 14px;
+  border-left: 3px solid var(--blue);
+  border-radius: 8px;
+  color: var(--muted);
+  background: rgba(111,169,255,.07);
+  line-height: 1.5;
+}
+
+.notice.warning {
+  border-color: var(--orange);
+  background: rgba(255,180,92,.07);
+}
+
+.notice.danger {
+  border-color: var(--red);
+  background: rgba(255,112,133,.07);
+}
+
+.divider {
+  height: 1px;
+  margin: 18px 0;
+  background: var(--border);
+}
+
+/* Zones and tables */
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  padding: 0 7px 9px;
+  color: var(--subtle);
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.data-table td {
+  padding: 7px;
+  border-top: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.data-table td:first-child,
+.data-table th:first-child {
+  padding-left: 0;
+}
+
+.data-table td:last-child,
+.data-table th:last-child {
+  padding-right: 0;
+}
+
+.data-table input,
+.data-table select {
+  min-width: 90px;
+}
+
+.zone-hours {
+  color: var(--green);
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.empty {
+  padding: 35px 18px;
+  border: 1px dashed var(--border);
+  border-radius: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.empty-icon {
+  display: block;
+  margin-bottom: 9px;
+  font-size: 28px;
+}
+
+/* Financial results */
+
+.hero-price {
+  padding: 19px;
+  margin-bottom: 13px;
+  border: 1px solid rgba(94,224,160,.2);
+  border-radius: 15px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(94,224,160,.15), transparent 16rem),
+    var(--surface-2);
+}
+
+.hero-price small {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-weight: 750;
+}
+
+.hero-price strong {
+  display: block;
+  font-size: 38px;
+  line-height: 1;
+  letter-spacing: -.06em;
+}
+
+.hero-price p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.metric-list {
+  display: grid;
+  gap: 0;
+}
+
+.metric {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.metric:last-child {
+  border-bottom: 0;
+}
+
+.metric span {
+  color: var(--muted);
+}
+
+.metric strong {
+  text-align: right;
+}
+
+.scenarios {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.scenario {
+  padding: 11px 7px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  text-align: center;
+}
+
+.scenario span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.scenario strong {
+  font-size: 13px;
+}
+
+.health-meter {
+  height: 8px;
+  margin: 13px 0 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+
+.health-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--red), var(--orange), var(--green));
+}
+
+/* Saved bids */
+
+.saved-grid {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 14px;
+}
+
+.saved-card {
+  position: relative;
+  transition: transform .15s, border-color .15s;
+}
+
+.saved-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(94,224,160,.32);
+}
+
+.saved-card .price {
+  display: block;
+  margin: 16px 0 5px;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -.05em;
+}
+
+.saved-card .meta {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.saved-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 15px;
+}
+
+/* Proposal */
+
+.proposal-page {
+  max-width: 900px;
+  margin: 0 auto;
+  color: var(--text);
+}
+
+.proposal-cover {
+  position: relative;
+  min-height: 380px;
+  padding: 52px;
+  overflow: hidden;
+}
+
+.proposal-cover::after {
+  content: "";
+  position: absolute;
+  right: -80px;
+  bottom: -120px;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: rgba(94,224,160,.1);
+}
+
+.proposal-company {
+  color: var(--green);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.proposal-title {
+  max-width: 600px;
+  margin-top: 80px;
+  font-size: clamp(38px,7vw,68px);
+  line-height: .98;
+  letter-spacing: -.07em;
+}
+
+.proposal-for {
+  margin-top: 28px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.proposal-section {
+  margin-top: 16px;
+  padding: 30px;
+}
+
+.proposal-section p,
+.proposal-section li {
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.proposal-section ul {
+  padding-left: 19px;
+}
+
+.price-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 22px;
+  padding: 22px;
+  border: 1px solid rgba(94,224,160,.24);
+  border-radius: 14px;
+  background: rgba(94,224,160,.055);
+}
+
+.price-box strong {
+  display: block;
+  font-size: 31px;
+  letter-spacing: -.05em;
+}
+
+.proposal-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.proposal-table th,
+.proposal-table td {
+  padding: 12px 9px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.proposal-table th:last-child,
+.proposal-table td:last-child {
+  text-align: right;
+}
+
+.signature-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-top: 45px;
+}
+
+.signature-line {
+  padding-top: 40px;
+  border-bottom: 1px solid var(--muted);
+}
+
+.signature-label {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/* Toast */
+
+.toast {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  max-width: 360px;
+  padding: 13px 16px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: .2s;
+  z-index: 200;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: none;
+}
+
+/* Responsive */
+
+@media (max-width: 1100px) {
+  .grid-4 {
+    grid-template-columns: repeat(2,1fr);
+  }
+
+  .saved-grid {
+    grid-template-columns: repeat(2,1fr);
+  }
+}
+
+@media (max-width: 930px) {
+  .estimator-layout {
+    display: block;
+  }
+
+  .sticky-column {
+    position: static;
+    margin-top: 17px;
+  }
+}
+
+@media (max-width: 760px) {
+  .shell {
+    display: block;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: 0;
+    width: 270px;
+    transform: translateX(-105%);
+    transition: transform .2s;
+    box-shadow: var(--shadow);
+  }
+
+  .sidebar.open {
+    transform: none;
+  }
+
+  .main {
+    padding: 20px 15px 55px;
+  }
+
+  .topbar {
+    flex-direction: column;
+  }
+
+  .top-actions {
+    justify-content: flex-start;
+  }
+
+  .mobile-menu {
+    display: inline-flex;
+  }
+
+  .saved-grid,
+  .grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .proposal-cover {
+    min-height: 320px;
+    padding: 28px;
+  }
+
+  .proposal-title {
+    margin-top: 60px;
+  }
+}
+
+@media (max-width: 540px) {
+  .grid-2,
+  .grid-4 {
+    grid-template-columns: 1fr;
+  }
+
+  .scenarios {
+    grid-template-columns: 1fr;
+  }
+
+  .signature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .price-box {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* Client proposal printing */
+
+@media print {
+  @page {
+    size: letter;
+    margin: .55in;
+  }
+
+  body,
+  body.light {
+    color: #172222 !important;
+    background: white !important;
+  }
+
+  .sidebar,
+  .topbar,
+  .no-print,
+  .toast,
+  #estimatorView,
+  #savedView,
+  #researchView {
+    display: none !important;
+  }
+
+  .shell {
+    display: block;
+  }
+
+  .main {
+    padding: 0;
+  }
+
+  #proposalView {
+    display: block !important;
+  }
+
+  .proposal-page {
+    max-width: none;
+  }
+
+  .card {
+    color: #172222;
+    background: white !important;
+    border-color: #dce4e1;
+    box-shadow: none;
+  }
+
+  .proposal-cover {
+    min-height: 8.7in;
+    page-break-after: always;
+  }
+
+  .proposal-section {
+    break-inside: avoid;
+  }
+
+  .proposal-section p,
+  .proposal-section li,
+  .muted {
+    color: #536362 !important;
+  }
+
+  .proposal-company,
+  .eyebrow {
+    color: #168658 !important;
+  }
+
+  .proposal-table th,
+  .proposal-table td {
+    border-color: #dce4e1;
+  }
+}
+</style>
+</head>
+
+<body>
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="logo">
+      <div class="logo-mark">B</div>
+      <div>
+        <strong>BidLens</strong>
+        <small>Profit-first bidding</small>
+      </div>
+    </div>
+
+    <nav class="navigation">
+      <button class="active" data-view="estimator">
+        <span class="nav-icon">⌁</span>
+        Bid estimator
+      </button>
+
+      <button data-view="proposal">
+        <span class="nav-icon">▤</span>
+        Client proposal
+      </button>
+
+      <button data-view="saved">
+        <span class="nav-icon">▣</span>
+        Saved bids
+      </button>
+
+      <button data-view="research">
+        <span class="nav-icon">◎</span>
+        Pricing guide
+      </button>
+    </nav>
+
+    <div class="sidebar-spacer"></div>
+
+    <div class="privacy-box">
+      <strong>● Local-first</strong>
+      Bid and customer data stays in this browser. Export a backup before clearing browser storage.
+    </div>
+
+    <div class="side-actions">
+      <button class="btn small" id="themeButton">◐ Theme</button>
+      <button class="btn small" id="backupButton">⇩ Backup</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar no-print">
+      <div>
+        <span class="eyebrow" id="pageEyebrow">Profit-first estimating</span>
+        <h1 id="pageTitle">Price the work, not the guess.</h1>
+        <p class="subtitle" id="pageSubtitle">
+          Build a profitable commercial-cleaning bid from labor, workload, overhead, and scope.
+        </p>
+      </div>
+
+      <div class="top-actions">
+        <button class="btn icon mobile-menu" id="menuButton" aria-label="Open navigation">☰</button>
+        <button class="btn" id="newButton">＋ New</button>
+        <button class="btn" id="importButton">⇧ Import</button>
+        <button class="btn primary" id="saveButton">Save bid</button>
+      </div>
+    </header>
+
+    <section class="view active" id="estimatorView"></section>
+    <section class="view" id="proposalView"></section>
+    <section class="view" id="savedView"></section>
+    <section class="view" id="researchView"></section>
+  </main>
+</div>
+
+<input type="file" id="importFile" accept="application/json" hidden>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const STORAGE_KEY = "bidlens_saved_bids_v1";
+  const DRAFT_KEY = "bidlens_draft_v1";
+  const THEME_KEY = "bidlens_theme_v1";
+  const MONTHLY_WEEKS = 52 / 12;
+
+  /*
+    These are editable starter assumptions, not claimed ISSA standards.
+    Every contractor should replace them with observed production data.
+  */
+  const ZONE_TYPES = {
+    office: {
+      label: "General office",
+      rate: 4500,
+      tasks: "Empty waste, dust accessible surfaces, spot clean, vacuum or mop floors."
+    },
+    restroom: {
+      label: "Restrooms",
+      rate: 1200,
+      tasks: "Clean and disinfect fixtures, counters, partitions and floors; restock dispensers."
+    },
+    lobby: {
+      label: "Lobby / reception",
+      rate: 3200,
+      tasks: "Clean entrance glass, dust surfaces, remove waste and detail floors."
+    },
+    medical: {
+      label: "Medical / clinical",
+      rate: 1800,
+      tasks: "Perform detailed cleaning and disinfection according to the agreed facility scope."
+    },
+    retail: {
+      label: "Retail",
+      rate: 4000,
+      tasks: "Remove waste, dust fixtures, spot clean surfaces and maintain customer-facing floors."
+    },
+    school: {
+      label: "School / daycare",
+      rate: 2800,
+      tasks: "Clean classrooms and common areas, remove waste, disinfect touchpoints and maintain floors."
+    },
+    warehouse: {
+      label: "Warehouse",
+      rate: 7500,
+      tasks: "Remove waste, dust accessible areas and sweep or maintain open floor areas."
+    },
+    breakroom: {
+      label: "Breakroom / kitchen",
+      rate: 1500,
+      tasks: "Clean counters, sinks, appliance exteriors, tables, waste containers and floors."
+    },
+    gym: {
+      label: "Fitness facility",
+      rate: 2300,
+      tasks: "Clean floors, mirrors, common surfaces, locker areas and agreed equipment touchpoints."
+    },
+    custom: {
+      label: "Custom area",
+      rate: 3000,
+      tasks: "Complete the cleaning tasks defined in the accepted scope of work."
+    }
+  };
+
+  let savedBids = loadJSON(STORAGE_KEY, []);
+  let state = loadJSON(DRAFT_KEY, createDefaultState());
+  let currentView = "estimator";
+
+  const $ = selector => document.querySelector(selector);
+  const $$ = selector => [...document.querySelectorAll(selector)];
+
+  function id() {
+    return crypto.randomUUID
+      ? crypto.randomUUID()
+      : Date.now().toString(36) + Math.random().toString(36).slice(2);
+  }
+
+  function esc(value = "") {
+    return String(value).replace(/[&<>"']/g, character => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;"
+    }[character]));
+  }
+
+  function numeric(value, fallback = 0) {
+    const result = Number(value);
+    return Number.isFinite(result) ? result : fallback;
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+
+  function round(value, decimals = 2) {
+    const factor = 10 ** decimals;
+    return Math.round((value + Number.EPSILON) * factor) / factor;
+  }
+
+  function loadJSON(key, fallback) {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(key));
+      return parsed ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function createDefaultState() {
+    return {
+      id: id(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+
+      company: {
+        name: "Northstar Cleaning Co.",
+        email: "hello@northstarcleaning.com",
+        phone: "(555) 010-2026",
+        address: "Your City, State",
+        tagline: "Reliable cleaning. Measurable standards."
+      },
+
+      client: {
+        company: "Acme Professional Center",
+        contact: "Jordan Taylor",
+        email: "jordan@example.com",
+        address: "100 Market Street",
+        city: "Your City, State",
+        proposalDate: todayISO(),
+        validDays: 30
+      },
+
+      facility: {
+        name: "Acme Professional Center",
+        type: "Professional office",
+        visitsPerWeek: 5,
+        contractMonths: 12,
+        startDate: "",
+        serviceWindow: "Monday–Friday after 6:00 PM"
+      },
+
+      costs: {
+        hourlyWage: 18,
+        payrollBurdenPct: 22,
+        suppliesMonthly: 160,
+        equipmentMonthly: 75,
+        travelPerVisit: 8,
+        overheadPct: 15,
+        targetMarginPct: 25,
+        contingencyPct: 3
+      },
+
+      zones: [
+        {
+          id: id(),
+          type: "office",
+          name: "Offices and corridors",
+          squareFeet: 8500,
+          productionRate: 4500,
+          fixedMinutes: 20
+        },
+        {
+          id: id(),
+          type: "restroom",
+          name: "Restrooms",
+          squareFeet: 900,
+          productionRate: 1200,
+          fixedMinutes: 15
+        },
+        {
+          id: id(),
+          type: "breakroom",
+          name: "Breakroom",
+          squareFeet: 600,
+          productionRate: 1500,
+          fixedMinutes: 10
+        }
+      ],
+
+      addons: [
+        {
+          id: id(),
+          name: "Monthly interior glass detailing",
+          monthlyPrice: 95,
+          monthlyCost: 38,
+          included: true
+        }
+      ],
+
+      proposal: {
+        introduction:
+          "Thank you for the opportunity to propose commercial cleaning services. Our program is structured around the facility's usage, service frequency, and agreed cleaning scope.",
+        exclusions:
+          "Exterior windows, hazardous-material remediation, pest control, high-access work, construction debris, and customer consumables are excluded unless specifically listed.",
+        terms:
+          "Invoices are issued monthly. Payment is due within 15 days. Either party may terminate service with 30 days' written notice unless superseded by a signed agreement.",
+        notes:
+          "Final pricing is subject to an on-site walkthrough and confirmation of the scope, access requirements, floor conditions, and actual facility measurements."
+      }
+    };
+  }
+
+  function normalizeState(input) {
+    const defaults = createDefaultState();
+
+    return {
+      ...defaults,
+      ...input,
+      company: { ...defaults.company, ...(input.company || {}) },
+      client: { ...defaults.client, ...(input.client || {}) },
+      facility: { ...defaults.facility, ...(input.facility || {}) },
+      costs: { ...defaults.costs, ...(input.costs || {}) },
+      proposal: { ...defaults.proposal, ...(input.proposal || {}) },
+      zones: Array.isArray(input.zones) ? input.zones : defaults.zones,
+      addons: Array.isArray(input.addons) ? input.addons : defaults.addons
+    };
+  }
+
+  state = normalizeState(state);
+
+  function persistDraft() {
+    state.updatedAt = new Date().toISOString();
+
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(state));
+    } catch {
+      toast("Browser storage is full. Export a backup before continuing.");
+    }
+  }
+
+  function persistSaved() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(savedBids));
+    } catch {
+      toast("Could not save. Export old bids and free browser storage.");
+    }
+  }
+
+  function todayISO() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function formatDate(date) {
+    if (!date) return "To be agreed";
+
+    return new Intl.DateTimeFormat(undefined, {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    }).format(new Date(date + "T12:00:00"));
+  }
+
+  function currency(value) {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 2
+    }).format(numeric(value));
+  }
+
+  function integer(value) {
+    return new Intl.NumberFormat().format(Math.round(numeric(value)));
+  }
+
+  function clone(value) {
+    return typeof structuredClone === "function"
+      ? structuredClone(value)
+      : JSON.parse(JSON.stringify(value));
+  }
+
+  function calculate(model = state) {
+    const visitsPerWeek = Math.max(numeric(model.facility.visitsPerWeek), 0);
+    const monthlyVisits = visitsPerWeek * MONTHLY_WEEKS;
+
+    const totalSquareFeet = model.zones.reduce(
+      (sum, zone) => sum + Math.max(numeric(zone.squareFeet), 0),
+      0
+    );
+
+    const hoursPerVisit = model.zones.reduce((sum, zone) => {
+      const squareFeet = Math.max(numeric(zone.squareFeet), 0);
+      const productionRate = Math.max(numeric(zone.productionRate), 1);
+      const fixedMinutes = Math.max(numeric(zone.fixedMinutes), 0);
+
+      return sum + squareFeet / productionRate + fixedMinutes / 60;
+    }, 0);
+
+    const monthlyLaborHours = hoursPerVisit * monthlyVisits;
+
+    const wage = Math.max(numeric(model.costs.hourlyWage), 0);
+    const burdenRate = Math.max(numeric(model.costs.payrollBurdenPct), 0) / 100;
+    const loadedHourlyCost = wage * (1 + burdenRate);
+    const monthlyLaborCost = monthlyLaborHours * loadedHourlyCost;
+
+    const travelCost =
+      Math.max(numeric(model.costs.travelPerVisit), 0) * monthlyVisits;
+
+    const suppliesCost = Math.max(numeric(model.costs.suppliesMonthly), 0);
+    const equipmentCost = Math.max(numeric(model.costs.equipmentMonthly), 0);
+
+    const recurringDirectCost =
+      monthlyLaborCost + travelCost + suppliesCost + equipmentCost;
+
+    const overheadRate =
+      Math.max(numeric(model.costs.overheadPct), 0) / 100;
+
+    const overheadCost = recurringDirectCost * overheadRate;
+    const costBeforeContingency = recurringDirectCost + overheadCost;
+
+    const contingencyRate =
+      Math.max(numeric(model.costs.contingencyPct), 0) / 100;
+
+    const contingencyCost = costBeforeContingency * contingencyRate;
+    const baseMonthlyCost = costBeforeContingency + contingencyCost;
+
+    const targetMarginRate = clamp(
+      numeric(model.costs.targetMarginPct) / 100,
+      0,
+      .95
+    );
+
+    /*
+      Correct margin formula:
+      price = cost / (1 - desired margin)
+
+      Multiplying cost by 1.25 produces a 20% margin, not a 25% margin.
+    */
+    const baseMonthlyPrice =
+      baseMonthlyCost / Math.max(1 - targetMarginRate, .05);
+
+    const includedAddons = model.addons.filter(addon => addon.included);
+    const addonRevenue = includedAddons.reduce(
+      (sum, addon) => sum + Math.max(numeric(addon.monthlyPrice), 0),
+      0
+    );
+    const addonCost = includedAddons.reduce(
+      (sum, addon) => sum + Math.max(numeric(addon.monthlyCost), 0),
+      0
+    );
+
+    const monthlyPrice = baseMonthlyPrice + addonRevenue;
+    const monthlyCost = baseMonthlyCost + addonCost;
+    const monthlyProfit = monthlyPrice - monthlyCost;
+
+    const actualMarginRate =
+      monthlyPrice > 0 ? monthlyProfit / monthlyPrice : 0;
+
+    const laborPctOfRevenue =
+      monthlyPrice > 0 ? monthlyLaborCost / monthlyPrice : 0;
+
+    const perVisitPrice =
+      monthlyVisits > 0 ? monthlyPrice / monthlyVisits : 0;
+
+    const pricePerSquareFootPerVisit =
+      totalSquareFeet > 0 && monthlyVisits > 0
+        ? monthlyPrice / monthlyVisits / totalSquareFeet
+        : 0;
+
+    const annualRevenue = monthlyPrice * 12;
+    const annualProfit = monthlyProfit * 12;
+
+    return {
+      visitsPerWeek,
+      monthlyVisits,
+      totalSquareFeet,
+      hoursPerVisit,
+      monthlyLaborHours,
+      wage,
+      loadedHourlyCost,
+      monthlyLaborCost,
+      travelCost,
+      suppliesCost,
+      equipmentCost,
+      recurringDirectCost,
+      overheadCost,
+      contingencyCost,
+      baseMonthlyCost,
+      baseMonthlyPrice,
+      addonRevenue,
+      addonCost,
+      monthlyPrice,
+      monthlyCost,
+      monthlyProfit,
+      actualMarginRate,
+      laborPctOfRevenue,
+      perVisitPrice,
+      pricePerSquareFootPerVisit,
+      annualRevenue,
+      annualProfit
+    };
+  }
+
+  function priceAtMargin(result, percentage) {
+    const rate = clamp(percentage / 100, 0, .95);
+    return result.monthlyCost / Math.max(1 - rate, .05);
+  }
+
+  function toast(message) {
+    const element = $("#toast");
+
+    element.textContent = message;
+    element.classList.add("show");
+
+    clearTimeout(element._timeout);
+    element._timeout = setTimeout(() => {
+      element.classList.remove("show");
+    }, 2600);
+  }
+
+  function setHeader(eyebrow, title, subtitle) {
+    $("#pageEyebrow").textContent = eyebrow;
+    $("#pageTitle").textContent = title;
+    $("#pageSubtitle").textContent = subtitle;
+  }
+
+  function showView(view) {
+    currentView = view;
+
+
+    $$(".view").forEach(element => element.classList.remove("active"));
+    $("#" + view + "View")?.classList.add("active");
+
+
+    $$("[data-view]").forEach(button => {
+      button.classList.toggle("active", button.dataset.view === view);
+    });
+
+    if (view === "estimator") {
+      setHeader(
+        "Profit-first estimating",
+        "Price the work, not the guess.",
+        "Build a profitable commercial-cleaning bid from labor, workload, overhead, and scope."
+      );
+      renderEstimator();
+    }
+
+    if (view === "proposal") {
+      setHeader(
+        "Client-facing document",
+        "Proposal preview",
+        "Internal wages, costs, overhead, and margin are excluded from this version."
+      );
+      renderProposal();
+    }
+
+    if (view === "saved") {
+      setHeader(
+        "Bid portfolio",
+        "Saved opportunities",
+        "Reopen, duplicate, export, and compare your locally stored bids."
+      );
+      renderSaved();
+    }
+
+    if (view === "research") {
+      setHeader(
+        "Commercial-cleaning economics",
+        "Pricing guide",
+        "Use benchmarks as starting points, then replace assumptions with your observed production data."
+      );
+      renderResearch();
+    }
+
+    $("#sidebar").classList.remove("open");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function bindModelFields(root = document) {
+    root.querySelectorAll("[data-path]").forEach(input => {
+      input.addEventListener("change", event => {
+        setPath(state, event.target.dataset.path, event.target.value);
+        persistDraft();
+
+        if (currentView === "estimator") {
+          renderEstimator();
+        } else if (currentView === "proposal") {
+          renderProposal();
+        }
+      });
+    });
+  }
+
+  function setPath(object, path, rawValue) {
+    const parts = path.split(".");
+    let target = object;
+
+    for (let i = 0; i < parts.length - 1; i++) {
+      target = target[parts[i]];
+    }
+
+    const last = parts[parts.length - 1];
+    const existing = target[last];
+
+    target[last] =
+      typeof existing === "number"
+        ? numeric(rawValue)
+        : rawValue;
+  }
+
+  function renderEstimator() {
+    const result = calculate();
+
+    $("#estimatorView").innerHTML = `
+      <div class="estimator-layout">
+        <div>
+          ${renderClientSection()}
+          ${renderFacilitySection()}
+          ${renderZonesSection(result)}
+          ${renderCostSection()}
+          ${renderAddonSection()}
+          ${renderProposalSettings()}
+        </div>
+
+        <aside class="sticky-column">
+          ${renderResultCard(result)}
+        </aside>
+      </div>
+    `;
+
+    bindModelFields($("#estimatorView"));
+    bindEstimatorActions();
+  }
+
+  function renderClientSection() {
+    return `
+      <section class="card section" id="clientSection">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">01 · Opportunity</span>
+            <h2>Company and prospect</h2>
+            <p class="muted">This information appears on the client proposal.</p>
+          </div>
+        </div>
+
+        <div class="grid grid-2">
+          <div>
+            <label>Your company</label>
+            <input data-path="company.name" value="${esc(state.company.name)}">
+          </div>
+
+          <div>
+            <label>Company email</label>
+            <input data-path="company.email" type="email" value="${esc(state.company.email)}">
+          </div>
+
+          <div>
+            <label>Company phone</label>
+            <input data-path="company.phone" value="${esc(state.company.phone)}">
+          </div>
+
+          <div>
+            <label>Company location</label>
+            <input data-path="company.address" value="${esc(state.company.address)}">
+          </div>
+
+          <div>
+            <label>Prospect company</label>
+            <input data-path="client.company" value="${esc(state.client.company)}">
+          </div>
+
+          <div>
+            <label>Contact person</label>
+            <input data-path="client.contact" value="${esc(state.client.contact)}">
+          </div>
+
+          <div>
+            <label>Prospect email</label>
+            <input data-path="client.email" type="email" value="${esc(state.client.email)}">
+          </div>
+
+          <div>
+            <label>Service address</label>
+            <input data-path="client.address" value="${esc(state.client.address)}">
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderFacilitySection() {
+    return `
+      <section class="card section" id="facilitySection">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">02 · Service pattern</span>
+            <h2>Facility and frequency</h2>
+          </div>
+        </div>
+
+        <div class="grid grid-3">
+          <div>
+            <label>Facility name</label>
+            <input data-path="facility.name" value="${esc(state.facility.name)}">
+          </div>
+
+          <div>
+            <label>Facility type</label>
+            <input data-path="facility.type" value="${esc(state.facility.type)}">
+          </div>
+
+          <div>
+            <label>Visits per week</label>
+            <input data-path="facility.visitsPerWeek"
+                   type="number"
+                   min="0"
+                   step=".5"
+                   value="${esc(state.facility.visitsPerWeek)}">
+          </div>
+
+          <div>
+            <label>Contract length</label>
+            <div class="input-with-suffix">
+              <input data-path="facility.contractMonths"
+                     type="number"
+                     min="1"
+                     value="${esc(state.facility.contractMonths)}">
+              <span>months</span>
+            </div>
+          </div>
+
+          <div>
+            <label>Proposed start date</label>
+            <input data-path="facility.startDate"
+                   type="date"
+                   value="${esc(state.facility.startDate)}">
+          </div>
+
+          <div>
+            <label>Proposal valid for</label>
+            <div class="input-with-suffix">
+              <input data-path="client.validDays"
+                     type="number"
+                     min="1"
+                     value="${esc(state.client.validDays)}">
+              <span>days</span>
+            </div>
+          </div>
+
+          <div style="grid-column:1/-1">
+            <label>Service window</label>
+            <input data-path="facility.serviceWindow"
+                   value="${esc(state.facility.serviceWindow)}">
+          </div>
+        </div>
+
+        <p class="help">
+          Monthly visit count uses 52 weeks ÷ 12 months, approximately 4.333 weeks per month.
+          This is more accurate than assuming every month has exactly four weeks.
+        </p>
+      </section>
+    `;
+  }
+
+  function renderZonesSection(result) {
+    const typeOptions = Object.entries(ZONE_TYPES)
+      .map(([key, type]) => `<option value="${key}">${esc(type.label)}</option>`)
+      .join("");
+
+    return `
+      <section class="card section" id="zonesSection">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">03 · Workloading</span>
+            <h2>Cleaning zones</h2>
+            <p class="muted">
+              Break the facility into areas with different cleaning speeds.
+            </p>
+          </div>
+
+          <button class="btn primary small" data-action="add-zone">
+            ＋ Add zone
+          </button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Area type</th>
+                <th>Area label</th>
+                <th>Square feet</th>
+                <th>Sq ft / hour</th>
+                <th>Fixed minutes</th>
+                <th>Hours / visit</th>
+                <th></th>
+              </tr>
+            </thead>
+
+            <tbody>
+              ${state.zones.map(zone => {
+                const hours =
+                  Math.max(numeric(zone.squareFeet), 0) /
+                  Math.max(numeric(zone.productionRate), 1) +
+                  Math.max(numeric(zone.fixedMinutes), 0) / 60;
+
+                return `
+                  <tr data-zone-row="${zone.id}">
+                    <td>
+                      <select data-zone-field="type" data-zone-id="${zone.id}">
+                        ${Object.entries(ZONE_TYPES).map(([key, type]) => `
+                          <option value="${key}" ${zone.type === key ? "selected" : ""}>
+                            ${esc(type.label)}
+                          </option>
+                        `).join("")}
+                      </select>
+                    </td>
+
+                    <td>
+                      <input data-zone-field="name"
+                             data-zone-id="${zone.id}"
+                             value="${esc(zone.name)}">
+                    </td>
+
+                    <td>
+                      <input data-zone-field="squareFeet"
+                             data-zone-id="${zone.id}"
+                             type="number"
+                             min="0"
+                             step="100"
+                             value="${esc(zone.squareFeet)}">
+                    </td>
+
+                    <td>
+                      <input data-zone-field="productionRate"
+                             data-zone-id="${zone.id}"
+                             type="number"
+                             min="1"
+                             step="100"
+                             value="${esc(zone.productionRate)}">
+                    </td>
+
+                    <td>
+                      <input data-zone-field="fixedMinutes"
+                             data-zone-id="${zone.id}"
+                             type="number"
+                             min="0"
+                             step="5"
+                             value="${esc(zone.fixedMinutes)}">
+                    </td>
+
+                    <td class="zone-hours">${round(hours,2)}h</td>
+
+                    <td>
+                      <button class="btn icon small danger"
+                              data-remove-zone="${zone.id}"
+                              title="Remove zone">×</button>
+                    </td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="notice" style="margin-top:15px">
+          <strong>${integer(result.totalSquareFeet)} total sq ft · ${round(result.hoursPerVisit,2)} labor hours per visit.</strong>
+          Production rate means the square footage one worker can complete in one hour.
+          Lower the rate for dense, detailed, highly occupied, or regulated spaces.
+        </div>
+      </section>
+    `;
+  }
+
+  function renderCostSection() {
+    return `
+      <section class="card section" id="costSection">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">04 · Cost structure</span>
+            <h2>Labor, overhead, and margin</h2>
+            <p class="muted">
+              Use actual company costs whenever possible.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-4">
+          <div>
+            <label>Cleaner hourly wage</label>
+            <div class="input-with-suffix">
+              <input data-path="costs.hourlyWage"
+                     type="number"
+                     min="0"
+                     step=".25"
+                     value="${esc(state.costs.hourlyWage)}">
+              <span>$/hr</span>
+            </div>
+          </div>
+
+          <div>
+            <label>Payroll burden</label>
+            <div class="input-with-suffix">
+              <input data-path="costs.payrollBurdenPct"
+                     type="number"
+                     min="0"
+                     step=".5"
+                     value="${esc(state.costs.payrollBurdenPct)}">
+              <span>%</span>
+            </div>
+            <p class="help">Taxes, insurance, benefits, paid time, and related labor costs.</p>
+          </div>
+
+          <div>
+            <label>Supplies per month</label>
+            <div class="input-with-suffix">
+              <input data-path="costs.suppliesMonthly"
+                     type="number"
+                     min="0"
+                     step="10"
+                     value="${esc(state.costs.suppliesMonthly)}">
+              <span>$</span>
+            </div>
+          </div>
+
+          <div>
+            <label>Equipment per month</label>
+            <div class="input-with-suffix">
+              <input data-path="costs.equipmentMonthly"
+                     type="number"
+                     min="0"
+                     step="10"
+                     value="${esc(state.costs.equipmentMonthly)}">
+              <span>$</span>
+            </div>
+          </div>
+
+          <div>
+            <label>Travel cost per visit</label>
+            <div class="input-with-suffix">
+              <input data-path="costs.travelPerVisit"
+                     type="number"
+                     min="0"
+                     step="1"
+                     value="${esc(state.costs.travelPerVisit)}">
+              <span>$</span>
+            </div>
+          </div>
+
+          <div>
+            <label>Overhead</label>
+            <div class="input-with-suffix">
+              <input data-path="costs.overheadPct"
+                     type="number"
+                     min="0"
+                     step=".5"
+                     value="${esc(state.costs.overheadPct)}">
+              <span>%</span>
+            </div>
+          </div>
+
+          <div>
+            <label>Contingency</label>
+            <div class="input-with-suffix">
+              <input data-path="costs.contingencyPct"
+                     type="number"
+                     min="0"
+                     step=".5"
+                     value="${esc(state.costs.contingencyPct)}">
+              <span>%</span>
+            </div>
+          </div>
+
+          <div>
+            <label>Target profit margin</label>
+            <div class="input-with-suffix">
+              <input data-path="costs.targetMarginPct"
+                     type="number"
+                     min="0"
+                     max="90"
+                     step=".5"
+                     value="${esc(state.costs.targetMarginPct)}">
+              <span>%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="notice warning" style="margin-top:15px">
+          <strong>Margin is not markup.</strong>
+          A $100 cost marked up by 25% produces a $125 price and only a 20% margin.
+          To earn a true 25% margin, divide cost by 0.75.
+        </div>
+      </section>
+    `;
+  }
+
+  function renderAddonSection() {
+    return `
+      <section class="card section" id="addonSection">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">05 · Specialty work</span>
+            <h2>Monthly add-ons</h2>
+            <p class="muted">
+              Add recurring floor care, glass cleaning, consumables, or other services.
+            </p>
+          </div>
+
+          <button class="btn small" data-action="add-addon">
+            ＋ Add service
+          </button>
+        </div>
+
+        ${
+          state.addons.length
+            ? `
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Include</th>
+                      <th>Service</th>
+                      <th>Monthly client price</th>
+                      <th>Monthly internal cost</th>
+                      <th>Gross contribution</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    ${state.addons.map(addon => `
+                      <tr>
+                        <td>
+                          <input data-addon-field="included"
+                                 data-addon-id="${addon.id}"
+                                 type="checkbox"
+                                 ${addon.included ? "checked" : ""}
+                                 style="width:18px">
+                        </td>
+
+                        <td>
+                          <input data-addon-field="name"
+                                 data-addon-id="${addon.id}"
+                                 value="${esc(addon.name)}">
+                        </td>
+
+                        <td>
+                          <input data-addon-field="monthlyPrice"
+                                 data-addon-id="${addon.id}"
+                                 type="number"
+                                 min="0"
+                                 step="5"
+                                 value="${esc(addon.monthlyPrice)}">
+                        </td>
+
+                        <td>
+                          <input data-addon-field="monthlyCost"
+                                 data-addon-id="${addon.id}"
+                                 type="number"
+                                 min="0"
+                                 step="5"
+                                 value="${esc(addon.monthlyCost)}">
+                        </td>
+
+                        <td class="zone-hours">
+                          ${currency(
+                            numeric(addon.monthlyPrice) -
+                            numeric(addon.monthlyCost)
+                          )}
+                        </td>
+
+                        <td>
+                          <button class="btn icon small danger"
+                                  data-remove-addon="${addon.id}">×</button>
+                        </td>
+                      </tr>
+                    `).join("")}
+                  </tbody>
+                </table>
+              </div>
+            `
+            : `
+              <div class="empty">
+                <span class="empty-icon">＋</span>
+                No specialty services added.
+              </div>
+            `
+        }
+      </section>
+    `;
+  }
+
+  function renderProposalSettings() {
+    return `
+      <section class="card section" id="proposalSettings">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">06 · Proposal language</span>
+            <h2>Client-facing terms</h2>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div>
+            <label>Introduction</label>
+            <textarea data-path="proposal.introduction">${esc(state.proposal.introduction)}</textarea>
+          </div>
+
+          <div>
+            <label>Exclusions</label>
+            <textarea data-path="proposal.exclusions">${esc(state.proposal.exclusions)}</textarea>
+          </div>
+
+          <div>
+            <label>Commercial terms</label>
+            <textarea data-path="proposal.terms">${esc(state.proposal.terms)}</textarea>
+          </div>
+
+          <div>
+            <label>Qualification note</label>
+            <textarea data-path="proposal.notes">${esc(state.proposal.notes)}</textarea>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderResultCard(result) {
+    const laborClass =
+      result.laborPctOfRevenue > .8
+        ? "bad"
+        : result.laborPctOfRevenue > .65
+          ? "warn"
+          : "good";
+
+    const marginClass =
+      result.actualMarginRate < .1
+        ? "bad"
+        : result.actualMarginRate < .2
+          ? "warn"
+          : "good";
+
+    const warnings = [];
+
+    if (result.hoursPerVisit <= 0) {
+      warnings.push("Add at least one cleaning zone.");
+    }
+
+    if (result.laborPctOfRevenue > .8) {
+      warnings.push("Labor exceeds 80% of revenue. Verify production rates and pricing.");
+    }
+
+    if (numeric(state.costs.payrollBurdenPct) === 0) {
+      warnings.push("Payroll burden is zero. The labor cost may be understated.");
+    }
+
+    if (numeric(state.costs.overheadPct) === 0) {
+      warnings.push("Overhead is zero. Administrative costs may be missing.");
+    }
+
+    if (result.actualMarginRate < .1) {
+      warnings.push("Expected margin is below 10%.");
+    }
+
+    return `
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Recommended bid</span>
+            <h2>Financial model</h2>
+          </div>
+
+          <span class="badge ${marginClass}">
+            ${round(result.actualMarginRate * 100,1)}% margin
+          </span>
+        </div>
+
+        <div class="hero-price">
+          <small>Recommended monthly price</small>
+          <strong>${currency(result.monthlyPrice)}</strong>
+          <p>
+            ${currency(result.perVisitPrice)} per visit ·
+            ${currency(result.annualRevenue)} annual revenue
+          </p>
+        </div>
+
+        <div class="metric-list">
+          <div class="metric">
+            <span>Total facility area</span>
+            <strong>${integer(result.totalSquareFeet)} sq ft</strong>
+          </div>
+
+          <div class="metric">
+            <span>Labor hours per visit</span>
+            <strong>${round(result.hoursPerVisit,2)} hours</strong>
+          </div>
+
+          <div class="metric">
+            <span>Monthly labor hours</span>
+            <strong>${round(result.monthlyLaborHours,1)} hours</strong>
+          </div>
+
+          <div class="metric">
+            <span>Loaded labor rate</span>
+            <strong>${currency(result.loadedHourlyCost)}/hr</strong>
+          </div>
+
+          <div class="metric">
+            <span>Monthly labor cost</span>
+            <strong>${currency(result.monthlyLaborCost)}</strong>
+          </div>
+
+          <div class="metric">
+            <span>Supplies + equipment</span>
+            <strong>${currency(result.suppliesCost + result.equipmentCost)}</strong>
+          </div>
+
+          <div class="metric">
+            <span>Travel</span>
+            <strong>${currency(result.travelCost)}</strong>
+          </div>
+
+          <div class="metric">
+            <span>Overhead</span>
+            <strong>${currency(result.overheadCost)}</strong>
+          </div>
+
+          <div class="metric">
+            <span>Contingency</span>
+            <strong>${currency(result.contingencyCost)}</strong>
+          </div>
+
+          <div class="metric">
+            <span>Total monthly cost</span>
+            <strong>${currency(result.monthlyCost)}</strong>
+          </div>
+
+          <div class="metric">
+            <span>Expected monthly profit</span>
+            <strong style="color:var(--green)">${currency(result.monthlyProfit)}</strong>
+          </div>
+
+          <div class="metric">
+            <span>Expected annual profit</span>
+            <strong style="color:var(--green)">${currency(result.annualProfit)}</strong>
+          </div>
+
+          <div class="metric">
+            <span>Labor share of revenue</span>
+            <strong class="badge ${laborClass}">
+              ${round(result.laborPctOfRevenue * 100,1)}%
+            </strong>
+          </div>
+
+          <div class="metric">
+            <span>Price / sq ft / visit</span>
+            <strong>${currency(result.pricePerSquareFootPerVisit)}</strong>
+          </div>
+        </div>
+
+        <div class="scenarios">
+          <div class="scenario">
+            <span>15% margin</span>
+            <strong>${currency(priceAtMargin(result,15))}</strong>
+          </div>
+          <div class="scenario">
+            <span>25% margin</span>
+            <strong>${currency(priceAtMargin(result,25))}</strong>
+          </div>
+          <div class="scenario">
+            <span>30% margin</span>
+            <strong>${currency(priceAtMargin(result,30))}</strong>
+          </div>
+        </div>
+
+        ${
+          warnings.length
+            ? `
+              <div class="notice danger" style="margin-top:14px">
+                <strong>Review before quoting:</strong>
+                <ul style="margin:7px 0 0;padding-left:18px">
+                  ${warnings.map(warning => `<li>${esc(warning)}</li>`).join("")}
+                </ul>
+              </div>
+            `
+            : `
+              <div class="notice" style="margin-top:14px">
+                The model contains labor, payroll burden, operating costs, overhead,
+                contingency, and target margin. Confirm assumptions with an on-site walkthrough.
+              </div>
+            `
+        }
+
+        <div class="toolbar" style="margin-top:14px">
+          <button class="btn" data-action="view-proposal">Preview proposal</button>
+          <button class="btn primary" data-action="save-bid">Save bid</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function bindEstimatorActions() {
+
+    $$("[data-zone-field]").forEach(input => {
+      input.addEventListener("change", event => {
+        const zone = state.zones.find(
+          item => item.id === event.target.dataset.zoneId
+        );
+
+        if (!zone) return;
+
+        const field = event.target.dataset.zoneField;
+
+        if (field === "type") {
+          zone.type = event.target.value;
+          zone.productionRate = ZONE_TYPES[zone.type].rate;
+
+          if (!zone.name || Object.values(ZONE_TYPES).some(
+            type => type.label === zone.name
+          )) {
+            zone.name = ZONE_TYPES[zone.type].label;
+          }
+        } else {
+          zone[field] =
+            typeof zone[field] === "number"
+              ? numeric(event.target.value)
+              : event.target.value;
+        }
+
+        persistDraft();
+        renderEstimator();
+      });
+    });
+
+
+    $$("[data-addon-field]").forEach(input => {
+      input.addEventListener("change", event => {
+        const addon = state.addons.find(
+          item => item.id === event.target.dataset.addonId
+        );
+
+        if (!addon) return;
+
+        const field = event.target.dataset.addonField;
+
+        if (field === "included") {
+          addon.included = event.target.checked;
+        } else {
+          addon[field] =
+            typeof addon[field] === "number"
+              ? numeric(event.target.value)
+              : event.target.value;
+        }
+
+        persistDraft();
+        renderEstimator();
+      });
+    });
+  }
+
+  function renderProposal() {
+    const result = calculate();
+    const includedAddons = state.addons.filter(addon => addon.included);
+
+    const scopeGroups = state.zones.map(zone => ({
+      label: zone.name || ZONE_TYPES[zone.type]?.label || "Cleaning area",
+      tasks: ZONE_TYPES[zone.type]?.tasks || ZONE_TYPES.custom.tasks
+    }));
+
+    $("#proposalView").innerHTML = `
+      <div class="toolbar no-print" style="margin-bottom:16px">
+        <button class="btn" data-action="edit-bid">← Edit bid</button>
+        <button class="btn" data-action="copy-summary">Copy summary</button>
+        <button class="btn primary" data-action="print-proposal">
+          Print / Save PDF
+        </button>
+      </div>
+
+      <div class="proposal-page">
+        <section class="card proposal-cover">
+          <div class="proposal-company">${esc(state.company.name)}</div>
+
+          <h1 class="proposal-title">
+            Commercial cleaning proposal
+          </h1>
+
+          <div class="proposal-for">
+            Prepared for<br>
+            <strong style="color:var(--text);font-size:22px">
+              ${esc(state.client.company)}
+            </strong><br>
+            ${esc(state.client.contact)}<br>
+            ${esc(state.client.address)}
+            ${state.client.city ? `<br>${esc(state.client.city)}` : ""}
+          </div>
+
+          <div style="position:absolute;left:52px;bottom:42px;color:var(--muted)">
+            ${formatDate(state.client.proposalDate || todayISO())}
+          </div>
+        </section>
+
+        <section class="card proposal-section">
+          <span class="eyebrow">Introduction</span>
+          <h2>A cleaning program designed for your facility</h2>
+
+          <p>${esc(state.proposal.introduction)}</p>
+
+          <div class="grid grid-3" style="margin-top:22px">
+            <div>
+              <label>Facility</label>
+              <strong>${esc(state.facility.name)}</strong>
+            </div>
+
+            <div>
+              <label>Service frequency</label>
+              <strong>${esc(state.facility.visitsPerWeek)} visits / week</strong>
+            </div>
+
+            <div>
+              <label>Approximate area</label>
+              <strong>${integer(result.totalSquareFeet)} sq ft</strong>
+            </div>
+
+            <div>
+              <label>Service window</label>
+              <strong>${esc(state.facility.serviceWindow)}</strong>
+            </div>
+
+            <div>
+              <label>Proposed start</label>
+              <strong>${formatDate(state.facility.startDate)}</strong>
+            </div>
+
+            <div>
+              <label>Initial term</label>
+              <strong>${esc(state.facility.contractMonths)} months</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="card proposal-section">
+          <span class="eyebrow">Scope of work</span>
+          <h2>Recurring cleaning services</h2>
+
+          ${scopeGroups.map(group => `
+            <div style="padding:13px 0;border-bottom:1px solid var(--border)">
+              <h3>${esc(group.label)}</h3>
+              <p style="margin-bottom:0">${esc(group.tasks)}</p>
+            </div>
+          `).join("")}
+
+          <p style="margin-top:18px">
+            Cleaning frequencies and detailed task specifications will be confirmed
+            during the final walkthrough and incorporated into the service agreement.
+          </p>
+        </section>
+
+        <section class="card proposal-section">
+          <span class="eyebrow">Investment</span>
+          <h2>Monthly service pricing</h2>
+
+          <table class="proposal-table">
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Monthly price</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr>
+                <td>
+                  Recurring commercial cleaning<br>
+                  <small class="muted">
+                    ${esc(state.facility.visitsPerWeek)} visits per week
+                  </small>
+                </td>
+                <td>${currency(result.baseMonthlyPrice)}</td>
+              </tr>
+
+              ${includedAddons.map(addon => `
+                <tr>
+                  <td>${esc(addon.name)}</td>
+                  <td>${currency(addon.monthlyPrice)}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+
+          <div class="price-box" style="margin-top:20px">
+            <div>
+              <span class="muted">Total monthly investment</span>
+              <strong>${currency(result.monthlyPrice)}</strong>
+            </div>
+
+            <div class="muted">
+              Equivalent to approximately<br>
+              <strong style="font-size:17px;color:var(--text)">
+                ${currency(result.perVisitPrice)} per visit
+              </strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="card proposal-section">
+          <span class="eyebrow">Commercial terms</span>
+          <h2>Assumptions and conditions</h2>
+
+          <h3>Terms</h3>
+          <p>${esc(state.proposal.terms)}</p>
+
+          <h3>Exclusions</h3>
+          <p>${esc(state.proposal.exclusions)}</p>
+
+          <h3>Final walkthrough</h3>
+          <p>${esc(state.proposal.notes)}</p>
+
+          <p>
+            This proposal remains valid for
+            <strong>${esc(state.client.validDays)} days</strong>
+            from ${formatDate(state.client.proposalDate || todayISO())}.
+          </p>
+        </section>
+
+        <section class="card proposal-section">
+          <span class="eyebrow">Acceptance</span>
+          <h2>Authorization to proceed</h2>
+
+          <p>
+            By signing below, the client authorizes ${esc(state.company.name)}
+            to prepare the final service agreement based on this proposal and
+            the confirmed walkthrough scope.
+          </p>
+
+          <div class="signature-grid">
+            <div>
+              <div class="signature-line"></div>
+              <div class="signature-label">Authorized client signature</div>
+            </div>
+
+            <div>
+              <div class="signature-line"></div>
+              <div class="signature-label">Printed name and title</div>
+            </div>
+
+            <div>
+              <div class="signature-line"></div>
+              <div class="signature-label">Date</div>
+            </div>
+
+            <div>
+              <div class="signature-line"></div>
+              <div class="signature-label">${esc(state.company.name)}</div>
+            </div>
+          </div>
+
+          <div style="margin-top:55px;color:var(--muted);font-size:12px">
+            ${esc(state.company.email)} ·
+            ${esc(state.company.phone)} ·
+            ${esc(state.company.address)}
+          </div>
+        </section>
+      </div>
+    `;
+  }
+
+  function renderSaved() {
+    const cards = savedBids
+      .slice()
+      .sort((a,b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))
+      .map(bid => {
+        const model = normalizeState(bid);
+        const result = calculate(model);
+
+        return `
+          <article class="card saved-card">
+            <span class="badge">
+              ${esc(model.facility.visitsPerWeek)}× weekly
+            </span>
+
+            <h2 style="margin-top:13px">
+              ${esc(model.client.company || "Untitled bid")}
+            </h2>
+
+            <p class="muted">
+              ${esc(model.facility.name || model.facility.type)}
+            </p>
+
+            <span class="price">${currency(result.monthlyPrice)}</span>
+
+            <div class="meta">
+              ${integer(result.totalSquareFeet)} sq ft<br>
+              ${round(result.hoursPerVisit,2)} labor hours per visit<br>
+              ${round(result.actualMarginRate * 100,1)}% estimated margin
+            </div>
+
+            <div class="saved-actions">
+              <button class="btn small primary"
+                      data-open-saved="${model.id}">
+                Open
+              </button>
+
+              <button class="btn small"
+                      data-duplicate-saved="${model.id}">
+                Duplicate
+              </button>
+
+              <button class="btn small danger"
+                      data-delete-saved="${model.id}">
+                Delete
+              </button>
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+
+    $("#savedView").innerHTML = savedBids.length
+      ? `<div class="saved-grid">${cards}</div>`
+      : `
+        <div class="card empty">
+          <span class="empty-icon">▣</span>
+          <h2>No saved bids yet</h2>
+          <p>Create an estimate and press “Save bid.”</p>
+          <button class="btn primary" data-action="edit-bid">
+            Create first bid
+          </button>
+        </div>
+      `;
+  }
+
+  function renderResearch() {
+    $("#researchView").innerHTML = `
+      <div class="grid grid-2">
+        <section class="card">
+          <span class="eyebrow">Core equation</span>
+          <h2>Production-based bidding</h2>
+
+          <div class="notice">
+            Labor hours per visit =
+            square footage ÷ production rate
+            + fixed task time
+          </div>
+
+          <div class="divider"></div>
+
+          <ol style="padding-left:19px;color:var(--muted);line-height:1.75">
+            <li>Break the building into meaningful cleaning zones.</li>
+            <li>Estimate the production rate for each zone.</li>
+            <li>Add fixed time for setup, travel within the facility, fixtures, and detailed tasks.</li>
+            <li>Multiply hours per visit by monthly visit frequency.</li>
+            <li>Apply wage and payroll burden.</li>
+            <li>Add supplies, equipment, travel, overhead, and contingency.</li>
+            <li>Divide cost by one minus the desired margin.</li>
+          </ol>
+        </section>
+
+        <section class="card">
+          <span class="eyebrow">Critical distinction</span>
+          <h2>Margin versus markup</h2>
+
+          <p class="muted">
+            Assume the contract costs $3,000 per month to perform.
+          </p>
+
+          <div class="metric-list">
+            <div class="metric">
+              <span>25% markup</span>
+              <strong>$3,750 price</strong>
+            </div>
+
+            <div class="metric">
+              <span>Actual margin</span>
+              <strong>20%</strong>
+            </div>
+
+            <div class="metric">
+              <span>True 25% margin price</span>
+              <strong>$4,000</strong>
+            </div>
+          </div>
+
+          <div class="notice warning" style="margin-top:15px">
+            Formula for a 25% margin:<br>
+            $3,000 ÷ (1 − 0.25) = $4,000
+          </div>
+        </section>
+
+        <section class="card">
+          <span class="eyebrow">Production rates</span>
+          <h2>Use benchmarks carefully</h2>
+
+          <p class="muted">
+            Production rates change with facility type, density, floor condition,
+            task frequency, service level, equipment, employee experience, and layout.
+          </p>
+
+          <p class="muted">
+            Medical facilities, restrooms, food areas, schools, high-traffic spaces,
+            and detailed scopes generally take longer than open, low-density areas.
+          </p>
+
+          <div class="notice">
+            The app's defaults are editable starting assumptions—not official standards.
+            Replace them with time studies and data from similar contracts.
+          </div>
+        </section>
+
+        <section class="card">
+          <span class="eyebrow">Walkthrough checklist</span>
+          <h2>Questions before submitting</h2>
+
+          <ul style="padding-left:19px;color:var(--muted);line-height:1.75">
+            <li>Is the square footage cleanable or total building area?</li>
+            <li>How many restrooms, fixtures, desks, and waste containers exist?</li>
+            <li>What floor types and floor conditions are present?</li>
+            <li>Who supplies liners, paper products, and soap?</li>
+            <li>Are there security, key, alarm, parking, or escort requirements?</li>
+            <li>Are periodic floor and carpet services included?</li>
+            <li>What quality level and inspection process does the client expect?</li>
+            <li>Are prevailing wage, union, medical, or regulatory requirements applicable?</li>
+          </ul>
+        </section>
+      </div>
+
+      <section class="card" style="margin-top:16px">
+        <span class="eyebrow">Important limitation</span>
+        <h2>An estimator, not an industry standard</h2>
+
+        <p class="muted">
+          BidLens performs financial calculations using the assumptions you enter.
+          It does not provide legal, tax, insurance, wage, safety, or regulatory advice.
+          Final pricing should be validated through an on-site walkthrough,
+          contract review, and your company's actual operating data.
+        </p>
+      </section>
+    `;
+  }
+
+  function saveCurrentBid() {
+    state.updatedAt = new Date().toISOString();
+
+    const index = savedBids.findIndex(bid => bid.id === state.id);
+
+    if (index >= 0) {
+      savedBids[index] = clone(state);
+      toast("Bid updated.");
+    } else {
+      savedBids.unshift(clone(state));
+      toast("Bid saved locally.");
+    }
+
+    persistDraft();
+    persistSaved();
+
+    if (currentView === "saved") renderSaved();
+  }
+
+  function newBid() {
+    if (!confirm("Start a new bid? Your current draft should be saved first if you want to keep it.")) {
+      return;
+    }
+
+    const company = clone(state.company);
+    state = createDefaultState();
+    state.company = company;
+
+    persistDraft();
+    showView("estimator");
+    toast("New bid created.");
+  }
+
+  function exportBackup() {
+    const payload = {
+      product: "BidLens",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      draft: state,
+      savedBids
+    };
+
+    const blob = new Blob(
+      [JSON.stringify(payload, null, 2)],
+      { type: "application/json" }
+    );
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `bidlens-backup-${todayISO()}.json`;
+    link.click();
+
+    URL.revokeObjectURL(link.href);
+    toast("Backup downloaded.");
+  }
+
+  async function importBackup(file) {
+    try {
+      const parsed = JSON.parse(await file.text());
+
+      if (
+        parsed.product === "BidLens" &&
+        Array.isArray(parsed.savedBids)
+      ) {
+        if (!confirm("Replace the current draft and saved bids with this backup?")) {
+          return;
+        }
+
+        state = normalizeState(parsed.draft || createDefaultState());
+        savedBids = parsed.savedBids.map(normalizeState);
+
+        persistDraft();
+        persistSaved();
+        showView("saved");
+        toast("BidLens backup imported.");
+        return;
+      }
+
+      if (parsed.id && parsed.client && parsed.costs) {
+        state = normalizeState(parsed);
+        persistDraft();
+        showView("estimator");
+        toast("Bid imported.");
+        return;
+      }
+
+      throw new Error("Unsupported file");
+    } catch {
+      toast("Could not import this file. Select a valid BidLens JSON backup.");
+    }
+  }
+
+  function copySummary() {
+    const result = calculate();
+
+    const text =
+`${state.company.name}
+Commercial Cleaning Proposal
+
+Prepared for: ${state.client.company}
+Facility: ${state.facility.name}
+Frequency: ${state.facility.visitsPerWeek} visits per week
+Approximate area: ${integer(result.totalSquareFeet)} sq ft
+
+Monthly service investment: ${currency(result.monthlyPrice)}
+Approximate price per visit: ${currency(result.perVisitPrice)}
+
+This pricing is subject to a final walkthrough and confirmation of the service scope.
+
+${state.company.email}
+${state.company.phone}`;
+
+    navigator.clipboard.writeText(text)
+      .then(() => toast("Proposal summary copied."))
+      .catch(() => toast("Clipboard access was unavailable."));
+  }
+
+  document.addEventListener("click", event => {
+    const viewButton = event.target.closest("[data-view]");
+
+    if (viewButton) {
+      showView(viewButton.dataset.view);
+      return;
+    }
+
+    const actionButton = event.target.closest("[data-action]");
+
+    if (actionButton) {
+      const action = actionButton.dataset.action;
+
+      if (action === "add-zone") {
+        state.zones.push({
+          id: id(),
+          type: "custom",
+          name: "Additional area",
+          squareFeet: 1000,
+          productionRate: ZONE_TYPES.custom.rate,
+          fixedMinutes: 0
+        });
+        persistDraft();
+        renderEstimator();
+      }
+
+      if (action === "add-addon") {
+        state.addons.push({
+          id: id(),
+          name: "Additional service",
+          monthlyPrice: 100,
+          monthlyCost: 40,
+          included: true
+        });
+        persistDraft();
+        renderEstimator();
+      }
+
+      if (action === "view-proposal") showView("proposal");
+      if (action === "edit-bid") showView("estimator");
+      if (action === "save-bid") saveCurrentBid();
+      if (action === "copy-summary") copySummary();
+      if (action === "print-proposal") window.print();
+
+      return;
+    }
+
+    const removeZone = event.target.closest("[data-remove-zone]");
+
+    if (removeZone) {
+      if (state.zones.length === 1) {
+        toast("A bid needs at least one cleaning zone.");
+        return;
+      }
+
+      state.zones = state.zones.filter(
+        zone => zone.id !== removeZone.dataset.removeZone
+      );
+
+      persistDraft();
+      renderEstimator();
+      return;
+    }
+
+    const removeAddon = event.target.closest("[data-remove-addon]");
+
+    if (removeAddon) {
+      state.addons = state.addons.filter(
+        addon => addon.id !== removeAddon.dataset.removeAddon
+      );
+
+      persistDraft();
+      renderEstimator();
+      return;
+    }
+
+    const openSaved = event.target.closest("[data-open-saved]");
+
+    if (openSaved) {
+      const bid = savedBids.find(item => item.id === openSaved.dataset.openSaved);
+
+      if (bid) {
+        state = normalizeState(clone(bid));
+        persistDraft();
+        showView("estimator");
+        toast("Saved bid opened.");
+      }
+      return;
+    }
+
+    const duplicateSaved = event.target.closest("[data-duplicate-saved]");
+
+    if (duplicateSaved) {
+      const source = savedBids.find(
+        item => item.id === duplicateSaved.dataset.duplicateSaved
+      );
+
+      if (source) {
+        const copy = normalizeState(clone(source));
+        copy.id = id();
+        copy.client.company += " — Copy";
+        copy.createdAt = new Date().toISOString();
+        copy.updatedAt = copy.createdAt;
+
+        savedBids.unshift(copy);
+        persistSaved();
+        renderSaved();
+        toast("Bid duplicated.");
+      }
+      return;
+    }
+
+    const deleteSaved = event.target.closest("[data-delete-saved]");
+
+    if (deleteSaved) {
+      const bid = savedBids.find(
+        item => item.id === deleteSaved.dataset.deleteSaved
+      );
+
+      if (
+        bid &&
+        confirm(`Delete the saved bid for ${bid.client.company}?`)
+      ) {
+        savedBids = savedBids.filter(
+          item => item.id !== deleteSaved.dataset.deleteSaved
+        );
+
+        persistSaved();
+        renderSaved();
+        toast("Saved bid deleted.");
+      }
+    }
+  });
+
+  $("#saveButton").addEventListener("click", saveCurrentBid);
+  $("#newButton").addEventListener("click", newBid);
+  $("#backupButton").addEventListener("click", exportBackup);
+
+  $("#importButton").addEventListener("click", () => {
+    $("#importFile").click();
+  });
+
+  $("#importFile").addEventListener("change", event => {
+    const file = event.target.files[0];
+
+    if (file) importBackup(file);
+
+    event.target.value = "";
+  });
+
+  $("#themeButton").addEventListener("click", () => {
+    document.body.classList.toggle("light");
+
+    localStorage.setItem(
+      THEME_KEY,
+      document.body.classList.contains("light") ? "light" : "dark"
+    );
+  });
+
+  $("#menuButton").addEventListener("click", () => {
+    $("#sidebar").classList.toggle("open");
+  });
+
+  document.addEventListener("keydown", event => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+      event.preventDefault();
+      saveCurrentBid();
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "n") {
+      event.preventDefault();
+      newBid();
+    }
+
+    if (event.key === "Escape") {
+      $("#sidebar").classList.remove("open");
+    }
+  });
+
+  if (localStorage.getItem(THEME_KEY) === "light") {
+    document.body.classList.add("light");
+  }
+
+  renderEstimator();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SitePulse — Website SEO & Performance Audit</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  /* ── CSS Variables & Reset ── */
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131d;
+    --surface-elevated: #1a1a2e;
+    --border: #252540;
+    --text: #e2e2ed;
+    --text-muted: #8888a8;
+    --accent: #6c5ce7;
+    --accent-glow: rgba(108, 92, 231, 0.3);
+    --green: #00d2a0;
+    --yellow: #f9a825;
+    --orange: #ff6b35;
+    --red: #ef4444;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Background ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(108, 92, 231, 0.08), transparent),
+      radial-gradient(ellipse 50% 50% at 90% 80%, rgba(0, 210, 160, 0.05), transparent);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Layout ── */
+  .app-container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px 24px 60px;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--accent), #a855f7);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+  }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+  .badge {
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 99px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+  .badge-free  { background: var(--surface-elevated); color: var(--text-muted); border: 1px solid var(--border); }
+  .badge-pro   { background: linear-gradient(135deg, var(--accent), #a855f7); color: #fff; }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 11px 22px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border: none;
+    transition: var(--transition);
+    white-space: nowrap;
+    font-family: inherit;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #7c3aed);
+    color: #fff;
+    box-shadow: 0 4px 20px var(--accent-glow);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(108, 92, 231, 0.45); }
+  .btn-outline {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-outline:hover { border-color: var(--accent); color: #fff; background: rgba(108, 92, 231, 0.08); }
+  .btn-sm { padding: 7px 14px; font-size: 0.8rem; }
+
+  /* ── Input ── */
+  .input-group {
+    display: flex;
+    background: var(--surface-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: var(--transition);
+  }
+  .input-group:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  .input-group input {
+    flex: 1;
+    padding: 14px 18px;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 0.95rem;
+    outline: none;
+    font-family: inherit;
+  }
+  .input-group input::placeholder { color: var(--text-muted); }
+  .input-group .btn { border-radius: 0; margin: 4px; }
+
+  /* ── Card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    backdrop-filter: blur(12px);
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .card-title { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
+  .card-subtitle { font-size: 0.8rem; color: var(--text-muted); }
+
+  /* ── Score Circle ── */
+  .score-ring {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+  }
+  .score-ring canvas { position: absolute; inset: 0; }
+  .score-value {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .score-num { font-size: 2rem; font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
+  .score-label { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+  /* ── Score Cards Grid ── */
+  .score-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .score-card {
+    background: var(--surface-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+    transition: var(--transition);
+  }
+  .score-card:hover { border-color: var(--accent); }
+  .score-card .label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 8px; }
+
+  /* ── Audit List ── */
+  .audit-list { display: flex; flex-direction: column; gap: 8px; }
+  .audit-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--surface-elevated);
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    transition: var(--transition);
+  }
+  .audit-item:hover { border-color: var(--border); }
+  .audit-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.8rem;
+  }
+  .audit-icon.pass  { background: rgba(0,210,160,0.15); color: var(--green); }
+  .audit-icon.warn  { background: rgba(249,168,37,0.15); color: var(--yellow); }
+  .audit-icon.fail  { background: rgba(239,68,68,0.15); color: var(--red); }
+  .audit-icon.info  { background: rgba(108,92,231,0.15); color: var(--accent); }
+  .audit-content { flex: 1; }
+  .audit-title { font-size: 0.9rem; font-weight: 600; }
+  .audit-desc  { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+  .audit-action { font-size: 0.78rem; color: var(--accent); margin-top: 4px; font-weight: 500; }
+
+  /* ── Tab Nav ── */
+  .tab-nav {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-btn {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: var(--transition);
+    font-family: inherit;
+    margin-bottom: -1px;
+  }
+  .tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+  .tab-btn:hover { color: var(--text); }
+
+  /* ── Loading Overlay ── */
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,15,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(6px);
+  }
+  .loading-overlay.hidden { display: none; }
+  .loader {
+    text-align: center;
+  }
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loader-text { color: var(--text-muted); font-size: 0.9rem; }
+
+  /* ── Paywall Modal ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,15,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    backdrop-filter: blur(8px);
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 36px 32px;
+    max-width: 440px;
+    width: 90%;
+    text-align: center;
+  }
+  .modal h2 { font-size: 1.4rem; margin-bottom: 8px; letter-spacing: -0.02em; }
+  .modal p { color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem; }
+  .pricing-box {
+    background: var(--surface-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .pricing-box .price { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.03em; }
+  .pricing-box .period { color: var(--text-muted); font-size: 0.85rem; }
+  .pricing-box .feature-list { text-align: left; font-size: 0.85rem; color: var(--text-muted); margin-top: 12px; }
+  .pricing-box .feature-list li { margin: 6px 0; list-style: '✓ '; }
+
+  /* ── Toast ── */
+  .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 300; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--surface-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 18px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* ── History ── */
+  .history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    border: 1px solid transparent;
+  }
+  .history-item:hover { background: var(--surface-elevated); border-color: var(--border); }
+  .history-url { font-size: 0.85rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px; }
+  .history-date { font-size: 0.75rem; color: var(--text-muted); }
+
+  /* ── Empty State ── */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+  }
+  .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+  .empty-state p { font-size: 0.9rem; }
+
+  /* ── Footer Metrics Row ── */
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .metric-pill {
+    background: var(--surface-elevated);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+  .metric-pill .val { font-size: 1.1rem; font-weight: 700; }
+  .metric-pill .lbl { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .app-container { padding: 12px 12px 40px; }
+    .header { flex-direction: column; gap: 12px; }
+    .score-grid { grid-template-columns: repeat(2, 1fr); }
+    .score-ring { width: 90px; height: 90px; }
+    .score-num { font-size: 1.4rem; }
+    .input-group { flex-direction: column; }
+    .input-group .btn { border-radius: 0 0 var(--radius-sm) var(--radius-sm); margin: 0; }
+  }
+
+  /* ── Print Styles ── */
+  @media print {
+    body::before { display: none; }
+    .header-actions, .btn, .input-group, .tab-nav, .history-item, .toast-container, .loading-overlay, .modal-overlay { display: none !important; }
+    .card { break-inside: avoid; border: 1px solid #ccc; }
+    body { background: #fff; color: #000; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      SitePulse
+    </div>
+    <div class="header-actions">
+      <span class="badge badge-free" id="planBadge">FREE · 3 audits left</span>
+      <button class="btn btn-sm btn-outline" onclick="showHistory()">📋 History</button>
+      <button class="btn btn-sm btn-outline" onclick="printReport()">🖨️ Print</button>
+    </div>
+  </header>
+
+  <!-- URL Input -->
+  <div class="card" style="margin-bottom:24px;">
+    <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:4px;letter-spacing:-0.01em;">🔍 Audit any website</h2>
+    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:16px;">Get a plain-English report on SEO, performance, and accessibility — in seconds.</p>
+    <div class="input-group">
+      <input type="url" id="urlInput" placeholder="https://yourbusiness.com" autocomplete="url" autofocus>
+      <button class="btn btn-primary" id="analyzeBtn" onclick="runAudit()">
+        Analyze →
+      </button>
+    </div>
+    <div style="margin-top:10px;font-size:0.73rem;color:var(--text-muted);">
+      Try: <span style="color:var(--accent);cursor:pointer;text-decoration:underline;" onclick="document.getElementById('urlInput').value='https://web.dev';runAudit();">web.dev</span>
+    </div>
+  </div>
+
+  <!-- Results Area (hidden initially) -->
+  <div id="resultsArea" style="display:none;">
+
+    <!-- Score Grid -->
+    <div class="score-grid" id="scoreGrid"></div>
+
+    <!-- Metrics Row -->
+    <div class="card" style="margin-bottom:24px;">
+      <div class="metrics-row" id="metricsRow"></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-nav">
+      <button class="tab-btn active" data-tab="seo">🔍 On-Page SEO</button>
+      <button class="tab-btn" data-tab="perf">⚡ Performance</button>
+      <button class="tab-btn" data-tab="a11y">♿ Accessibility</button>
+      <button class="tab-btn" data-tab="all">📋 All Issues</button>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="card" style="min-height:200px;">
+      <div class="audit-list" id="auditList"></div>
+      <div class="empty-state" id="emptyTab" style="display:none;">
+        <div class="icon">✨</div>
+        <p>No issues found in this category — great job!</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Empty State (shown before first audit) -->
+  <div id="emptyState">
+    <div class="empty-state" style="margin-top:40px;">
+      <div class="icon">🚀</div>
+      <p style="font-weight:600;color:var(--text);">Enter a URL above to start your first audit</p>
+      <p style="margin-top:6px;">You get 3 free audits. Then just $19/month for unlimited.</p>
+    </div>
+  </div>
+
+  <!-- History Section -->
+  <div class="card" id="historySection" style="margin-top:24px;display:none;">
+    <div class="card-header">
+      <span class="card-title">📋 Recent Audits</span>
+      <button class="btn btn-sm btn-outline" onclick="clearHistory()">Clear</button>
+    </div>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay hidden" id="loadingOverlay">
+  <div class="loader">
+    <div class="spinner"></div>
+    <p class="loader-text" id="loaderText">Analyzing your site...</p>
+  </div>
+</div>
+
+<!-- Paywall Modal -->
+<div class="modal-overlay hidden" id="paywallModal">
+  <div class="modal">
+    <div style="font-size:2.5rem;margin-bottom:8px;">🔒</div>
+    <h2>Free Audits Used</h2>
+    <p>You've used all 3 free audits. Unlock unlimited audits and keep improving your site.</p>
+    <div class="pricing-box">
+      <div class="price">$19<span class="period">/month</span></div>
+      <div style="margin-top:4px;font-size:0.8rem;color:var(--text-muted);">or $190/year (save 17%)</div>
+      <ul class="feature-list" style="padding-left:18px;margin-top:12px;">
+        <li>Unlimited website audits</li>
+        <li>Detailed SEO recommendations</li>
+        <li>Performance & accessibility reports</li>
+        <li>Audit history & trend tracking</li>
+        <li>Export reports as PDF</li>
+      </ul>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="startCheckout()">
+      💳 Upgrade to Pro — $19/mo
+    </button>
+    <p style="font-size:0.72rem;color:var(--text-muted);margin-top:12px;">
+      Secure payment via Stripe. Cancel anytime.
+    </p>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ──────────────────────────────────────────
+// SitePulse — Full Application Logic
+// ──────────────────────────────────────────
+
+/* ─── Constants ─── */
+const PSI_API = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
+const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/YOUR_PAYMENT_LINK'; // ← Replace with your Stripe Payment Link
+const MAX_FREE_AUDITS = 3;
+const DB_NAME = 'SitePulseDB';
+const DB_VERSION = 1;
+
+/* ─── State ─── */
+let state = {
+  freeAuditsUsed: parseInt(localStorage.getItem('sp_free_audits') || '0'),
+  isPro: localStorage.getItem('sp_is_pro') === 'true',
+  currentReport: null,
+  auditHistory: [],
+  activeTab: 'seo'
+};
+
+/* ─── IndexedDB ─── */
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('audits')) {
+        db.createObjectStore('audits', { keyPath: 'id', autoIncrement: true });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveAudit(report) {
+  const db = await openDB();
+  const tx = db.transaction('audits', 'readwrite');
+  tx.objectStore('audits').add({
+    url: report.url,
+    timestamp: Date.now(),
+    scores: { perf: report.performanceScore, seo: report.seoScore, a11y: report.a11yScore },
+  });
+  await new Promise(r => tx.oncomplete = r);
+  db.close();
+}
+
+async function loadHistory() {
+  const db = await openDB();
+  const tx = db.transaction('audits', 'readonly');
+  const items = await new Promise(r => {
+    const req = tx.objectStore('audits').getAll();
+    req.onsuccess = () => r(req.result);
+    req.onerror = () => r([]);
+  });
+  db.close();
+  return items.sort((a, b) => b.timestamp - a.timestamp);
+}
+
+async function clearHistoryDB() {
+  const db = await openDB();
+  const tx = db.transaction('audits', 'readwrite');
+  tx.objectStore('audits').clear();
+  await new Promise(r => tx.oncomplete = r);
+  db.close();
+  state.auditHistory = [];
+  renderHistory();
+  toast('History cleared');
+}
+
+/* ─── Toasts ─── */
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; setTimeout(() => el.remove(), 300); }, 3000);
+}
+
+/* ─── Loading ─── */
+function showLoading(text = 'Analyzing your site...') {
+  document.getElementById('loaderText').textContent = text;
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.add('hidden');
+}
+
+/* ─── URL Validation ─── */
+function normalizeUrl(url) {
+  url = url.trim();
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  return url;
+}
+function isValidUrl(url) {
+  try { new URL(url); return true; } catch { return false; }
+}
+
+/* ─── Score Color ─── */
+function scoreColor(s) {
+  if (s >= 90) return 'var(--green)';
+  if (s >= 50) return 'var(--yellow)';
+  return 'var(--red)';
+}
+function scoreLabel(s) {
+  if (s >= 90) return 'Good';
+  if (s >= 50) return 'Needs Work';
+  return 'Poor';
+}
+
+/* ─── Draw Score Ring ─── */
+function drawScoreRing(canvasId, score, color) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const size = canvas.width;
+  const cx = size / 2, cy = size / 2, r = (size / 2) - 6;
+  ctx.clearRect(0, 0, size, size);
+  // Background circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#252540';
+  ctx.lineWidth = 5;
+  ctx.stroke();
+  // Score arc
+  const angle = (score / 100) * Math.PI * 2 - Math.PI / 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, -Math.PI / 2, angle);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+
+/* ─── PageSpeed Insights ─── */
+async function fetchPageSpeed(url) {
+  const params = new URLSearchParams({ url, strategy: 'mobile' });
+  const resp = await fetch(`${PSI_API}?${params}`);
+  if (!resp.ok) throw new Error(`PageSpeed API error: ${resp.status}`);
+  const data = await resp.json();
+  const lh = data.lighthouseResult;
+  const cats = lh.categories || {};
+  return {
+    performanceScore: Math.round((cats.performance?.score || 0) * 100),
+    seoScore: Math.round((cats.seo?.score || 0) * 100),
+    accessibilityScore: Math.round((cats.accessibility?.score || 0) * 100),
+    bestPracticesScore: Math.round((cats['best-practices']?.score || 0) * 100),
+    fcp: lh.audits?.['first-contentful-paint']?.displayValue || 'N/A',
+    lcp: lh.audits?.['largest-contentful-paint']?.displayValue || 'N/A',
+    tbt: lh.audits?.['total-blocking-time']?.displayValue || 'N/A',
+    si: lh.audits?.['speed-index']?.displayValue || 'N/A',
+    cls: lh.audits?.['cumulative-layout-shift']?.displayValue || 'N/A',
+    tti: lh.audits?.['interactive']?.displayValue || 'N/A',
+    audits: lh.audits || {},
+    finalUrl: lh.finalUrl || url,
+  };
+}
+
+/* ─── On-Page SEO Analysis ─── */
+async function fetchAndAnalyzeHTML(url) {
+  try {
+    const resp = await fetch(CORS_PROXY + encodeURIComponent(url));
+    if (!resp.ok) return null;
+    const html = await resp.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    const findings = [];
+
+    // Title
+    const title = doc.querySelector('title');
+    const titleText = title?.textContent?.trim() || '';
+    if (!titleText) findings.push({ cat:'seo', severity:'fail', title:'Missing title tag', desc:'Every page needs a unique <title>.', action:'Add a descriptive title tag (50-60 characters).', score:0 });
+    else if (titleText.length < 10) findings.push({ cat:'seo', severity:'warn', title:'Title too short', desc:`"${titleText}" is only ${titleText.length} chars.`, action:'Expand your title to 50-60 characters.', score:40 });
+    else if (titleText.length > 70) findings.push({ cat:'seo', severity:'warn', title:'Title too long', desc:`"${titleText}" is ${titleText.length} chars — Google may truncate it.`, action:'Shorten your title to under 60 characters.', score:50 });
+    else findings.push({ cat:'seo', severity:'pass', title:'Title tag looks good', desc:`"${titleText}" — ${titleText.length} characters.`, action:null, score:100 });
+
+    // Meta Description
+    const metaDesc = doc.querySelector('meta[name="description"]');
+    const descContent = metaDesc?.getAttribute('content')?.trim() || '';
+    if (!descContent) findings.push({ cat:'seo', severity:'fail', title:'Missing meta description', desc:'No meta description found.', action:'Add a compelling meta description (120-160 characters).', score:0 });
+    else if (descContent.length < 50) findings.push({ cat:'seo', severity:'warn', title:'Meta description too short', desc:`${descContent.length} characters.`, action:'Expand to 120-160 characters for best results.', score:45 });
+    else if (descContent.length > 165) findings.push({ cat:'seo', severity:'warn', title:'Meta description too long', desc:`${descContent.length} characters.`, action:'Trim to 160 characters max.', score:55 });
+    else findings.push({ cat:'seo', severity:'pass', title:'Meta description looks good', desc:`${descContent.length} characters.`, action:null, score:100 });
+
+    // H1
+    const h1s = doc.querySelectorAll('h1');
+    if (h1s.length === 0) findings.push({ cat:'seo', severity:'fail', title:'No H1 heading found', desc:'Every page should have one clear H1.', action:'Add a single, descriptive H1 to your page.', score:0 });
+    else if (h1s.length > 1) findings.push({ cat:'seo', severity:'warn', title:`${h1s.length} H1 tags found`, desc:'Multiple H1s can confuse search engines.', action:'Use only one H1 per page. Convert others to H2.', score:40 });
+    else findings.push({ cat:'seo', severity:'pass', title:'H1 heading present', desc:`"${h1s[0].textContent.trim().substring(0, 60)}"`, action:null, score:100 });
+
+    // Canonical
+    const canonical = doc.querySelector('link[rel="canonical"]');
+    if (!canonical) findings.push({ cat:'seo', severity:'warn', title:'No canonical URL', desc:'Missing canonical tag may cause duplicate content issues.', action:'Add <link rel="canonical" href="..."> to your page.', score:50 });
+    else findings.push({ cat:'seo', severity:'pass', title:'Canonical URL set', desc:canonical.getAttribute('href'), action:null, score:100 });
+
+    // OG Tags
+    const ogTitle = doc.querySelector('meta[property="og:title"]');
+    const ogDesc = doc.querySelector('meta[property="og:description"]');
+    const ogImage = doc.querySelector('meta[property="og:image"]');
+    const ogCount = [ogTitle, ogDesc, ogImage].filter(Boolean).length;
+    if (ogCount < 3) findings.push({ cat:'seo', severity:'warn', title:`${3 - ogCount} Open Graph tags missing`, desc:'Incomplete social sharing previews.', action:'Add og:title, og:description, and og:image meta tags.', score:30 + ogCount * 20 });
+    else findings.push({ cat:'seo', severity:'pass', title:'Open Graph tags complete', desc:'Social sharing previews will look great.', action:null, score:100 });
+
+    // Viewport
+    const viewport = doc.querySelector('meta[name="viewport"]');
+    if (!viewport) findings.push({ cat:'seo', severity:'fail', title:'No viewport meta tag', desc:'Site may not be mobile-friendly.', action:'Add <meta name="viewport" content="width=device-width, initial-scale=1">', score:0 });
+    else findings.push({ cat:'seo', severity:'pass', title:'Viewport meta tag present', desc:'Mobile-friendly foundation is set.', action:null, score:100 });
+
+    // Image Alt Text
+    const imgs = doc.querySelectorAll('img');
+    const imgsMissingAlt = [...imgs].filter(i => !i.getAttribute('alt') || i.getAttribute('alt').trim() === '');
+    const imgCount = imgs.length;
+    if (imgCount === 0) {
+      findings.push({ cat:'seo', severity:'pass', title:'No images on page', desc:'Nothing to check here.', action:null, score:100 });
+    } else if (imgsMissingAlt.length > 0) {
+      findings.push({ cat:'seo', severity:'warn', title:`${imgsMissingAlt.length} of ${imgCount} images missing alt text`, desc:'Alt text helps search engines understand images.', action:`Add descriptive alt attributes to ${imgsMissingAlt.length} image(s).`, score:Math.max(10, 100 - (imgsMissingAlt.length / imgCount) * 100) });
+    } else {
+      findings.push({ cat:'seo', severity:'pass', title:`All ${imgCount} images have alt text`, desc:'Great for accessibility and image SEO.', action:null, score:100 });
+    }
+
+    // Schema Markup
+    const schema = doc.querySelector('script[type="application/ld+json"]');
+    if (!schema) findings.push({ cat:'seo', severity:'info', title:'No structured data (Schema) found', desc:'Schema helps Google display rich snippets.', action:'Add JSON-LD structured data for your content type.', score:30 });
+    else findings.push({ cat:'seo', severity:'pass', title:'Structured data detected', desc:'Schema.org JSON-LD markup present.', action:null, score:100 });
+
+    // Heading hierarchy
+    const h2s = doc.querySelectorAll('h2');
+    const h3s = doc.querySelectorAll('h3');
+    if (h2s.length === 0 && doc.body.textContent.length > 500) {
+      findings.push({ cat:'seo', severity:'info', title:'No H2 subheadings found', desc:'H2s help structure content for readers and crawlers.', action:'Add H2 subheadings to break up sections.', score:40 });
+    }
+
+    // HTTPS check
+    if (!url.startsWith('https://')) {
+      findings.push({ cat:'seo', severity:'fail', title:'Site is not using HTTPS', desc:'Google uses HTTPS as a ranking signal.', action:'Migrate your site to HTTPS immediately.', score:0 });
+    }
+
+    return findings;
+  } catch (e) {
+    console.warn('On-page SEO analysis failed:', e);
+    return [{ cat:'seo', severity:'warn', title:'Could not analyze on-page SEO', desc:'The site may block crawlers or took too long to respond.', action:'Try again or check the URL manually.', score:0 }];
+  }
+}
+
+/* ─── Build Lighthouse Audit Items ─── */
+function buildLighthouseAudits(psiData) {
+  const audits = [];
+  const raw = psiData.audits;
+  const importantAuditIds = [
+    'render-blocking-resources', 'uses-optimized-images', 'uses-text-compression',
+    'unminified-css', 'unminified-javascript', 'unused-css-rules', 'unused-javascript',
+    'uses-responsive-images', 'offscreen-images', 'efficient-animated-content',
+    'dom-size', 'critical-request-chains', 'server-response-time',
+    'font-display', 'uses-long-cache-ttl', 'total-byte-weight',
+    'network-requests', 'network-rtt', 'mainthread-work-breakdown',
+    'bootup-time', 'uses-passive-event-listeners', 'no-document-write',
+    'image-alt', 'link-text', 'meta-description', 'http-status-code',
+    'is-crawlable', 'robots-txt', 'canonical', 'hreflang',
+    'plugins', 'structured-data', 'font-size', 'color-contrast',
+    'accesskeys', 'aria-allowed-attr', 'aria-required-attr', 'button-name',
+    'document-title', 'html-has-lang', 'label', 'list', 'tabindex',
+    'td-headers-attr', 'valid-lang'
+  ];
+
+  for (const id of importantAuditIds) {
+    const audit = raw[id];
+    if (!audit || audit.scoreDisplayMode === 'notApplicable' || audit.scoreDisplayMode === 'manual') continue;
+
+    const score = audit.score !== null ? Math.round(audit.score * 100) : null;
+    let severity = 'info';
+    if (score !== null) {
+      if (score >= 90) severity = 'pass';
+      else if (score >= 50) severity = 'warn';
+      else severity = 'fail';
+    }
+
+    let cat = 'perf';
+    const perfAudits = ['render-blocking-resources','uses-optimized-images','uses-text-compression','unminified-css',
+      'unminified-javascript','unused-css-rules','unused-javascript','uses-responsive-images','offscreen-images',
+      'efficient-animated-content','dom-size','critical-request-chains','server-response-time','font-display',
+      'uses-long-cache-ttl','total-byte-weight','network-requests','network-rtt','mainthread-work-breakdown','bootup-time'];
+    const seoAudits = ['meta-description','http-status-code','is-crawlable','robots-txt','canonical','hreflink','plugins','structured-data'];
+    const a11yAudits = ['image-alt','font-size','color-contrast','accesskeys','aria-allowed-attr','aria-required-attr',
+      'button-name','document-title','html-has-lang','label','list','tabindex','td-headers-attr','valid-lang'];
+
+    if (seoAudits.includes(id)) cat = 'seo';
+    else if (a11yAudits.includes(id)) cat = 'a11y';
+
+    audits.push({
+      cat,
+      severity,
+      title: audit.title || id,
+      desc: audit.description || '',
+      action: audit.displayValue || (severity === 'fail' ? 'Fix this issue to improve your score.' : null),
+      score: score !== null ? score : 50,
+      isLighthouse: true
+    });
+  }
+  return audits;
+}
+
+/* ─── Main Audit Flow ─── */
+async function runAudit() {
+  const input = document.getElementById('urlInput');
+  let url = normalizeUrl(input.value);
+  if (!isValidUrl(url)) { toast('Please enter a valid URL'); return; }
+  input.value = url;
+
+  // Paywall check
+  if (!state.isPro && state.freeAuditsUsed >= MAX_FREE_AUDITS) {
+    showPaywall();
+    return;
+  }
+
+  showLoading('Running full audit...');
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultsArea').style.display = 'none';
+
+  try {
+    // Run both analyses in parallel
+    showLoading('Fetching performance data from Google...');
+    const [psiData, onpageFindings] = await Promise.all([
+      fetchPageSpeed(url),
+      fetchAndAnalyzeHTML(url)
+    ]);
+
+    showLoading('Building your report...');
+
+    // Build combined audit items
+    const lighthouseAudits = buildLighthouseAudits(psiData);
+    const allAudits = [...(onpageFindings || []), ...lighthouseAudits];
+
+    const report = {
+      url,
+      timestamp: Date.now(),
+      finalUrl: psiData.finalUrl,
+      performanceScore: psiData.performanceScore,
+      seoScore: psiData.seoScore,
+      accessibilityScore: psiData.accessibilityScore,
+      bestPracticesScore: psiData.bestPracticesScore,
+      metrics: {
+        fcp: psiData.fcp, lcp: psiData.lcp, tbt: psiData.tbt,
+        si: psiData.si, cls: psiData.cls, tti: psiData.tti,
+      },
+      audits: allAudits,
+    };
+
+    state.currentReport = report;
+    renderReport(report);
+    document.getElementById('resultsArea').style.display = 'block';
+    document.getElementById('resultsArea').scrollIntoView({ behavior: 'smooth' });
+
+    // Save to history
+    await saveAudit(report);
+    state.auditHistory = await loadHistory();
+    renderHistory();
+
+    // Deduct free audit
+    if (!state.isPro) {
+      state.freeAuditsUsed++;
+      localStorage.setItem('sp_free_audits', String(state.freeAuditsUsed));
+      updatePlanBadge();
+    }
+
+    toast('✅ Audit complete!');
+  } catch (err) {
+    console.error('Audit failed:', err);
+    toast('❌ Audit failed. Check the URL and try again.');
+  } finally {
+    hideLoading();
+  }
+}
+
+/* ─── Render Report ─── */
+function renderReport(report) {
+  // Score Grid
+  const scoreGrid = document.getElementById('scoreGrid');
+  scoreGrid.innerHTML = '';
+
+  const scores = [
+    { label: 'Performance', score: report.performanceScore, id: 'perf' },
+    { label: 'SEO', score: report.seoScore, id: 'seo' },
+    { label: 'Accessibility', score: report.accessibilityScore, id: 'a11y' },
+    { label: 'Best Practices', score: report.bestPracticesScore, id: 'bp' },
+  ];
+
+  scores.forEach(s => {
+    const canvasId = `ring-${s.id}`;
+    const card = document.createElement('div');
+    card.className = 'score-card';
+    card.innerHTML = `
+      <div class="score-ring">
+        <canvas id="${canvasId}" width="120" height="120"></canvas>
+        <div class="score-value">
+          <span class="score-num">${s.score}</span>
+          <span class="score-label">/100</span>
+        </div>
+      </div>
+      <div class="label">${s.label}</div>
+    `;
+    scoreGrid.appendChild(card);
+    // Draw after append so canvas is in DOM
+    requestAnimationFrame(() => drawScoreRing(canvasId, s.score, scoreColor(s.score)));
+  });
+
+  // Metrics Row
+  const metricsRow = document.getElementById('metricsRow');
+  const m = report.metrics;
+  metricsRow.innerHTML = `
+    <div class="metric-pill"><div class="val">${m.fcp}</div><div class="lbl">First Contentful Paint</div></div>
+    <div class="metric-pill"><div class="val">${m.lcp}</div><div class="lbl">Largest Contentful Paint</div></div>
+    <div class="metric-pill"><div class="val">${m.tbt}</div><div class="lbl">Total Blocking Time</div></div>
+    <div class="metric-pill"><div class="val">${m.si}</div><div class="lbl">Speed Index</div></div>
+    <div class="metric-pill"><div class="val">${m.cls}</div><div class="lbl">Cumulative Layout Shift</div></div>
+    <div class="metric-pill"><div class="val">${m.tti}</div><div class="lbl">Time to Interactive</div></div>
+  `;
+
+  // Tab navigation setup
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.activeTab = btn.dataset.tab;
+      renderAuditList(report.audits, state.activeTab);
+    });
+  });
+
+  // Render default tab
+  renderAuditList(report.audits, 'seo');
+}
+
+function renderAuditList(audits, tab) {
+  const list = document.getElementById('auditList');
+  const empty = document.getElementById('emptyTab');
+
+  let filtered = tab === 'all' ? audits : audits.filter(a => a.cat === tab);
+  // Remove duplicates (Lighthouse may overlap with on-page findings)
+  const seen = new Set();
+  filtered = filtered.filter(a => {
+    const key = a.title;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  // Sort by severity
+  const sevOrder = { fail: 0, warn: 1, info: 2, pass: 3 };
+  filtered.sort((a, b) => (sevOrder[a.severity] || 2) - (sevOrder[b.severity] || 2));
+
+  if (filtered.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+  list.innerHTML = filtered.map(a => `
+    <div class="audit-item">
+      <div class="audit-icon ${a.severity}">
+        ${a.severity === 'pass' ? '✓' : a.severity === 'fail' ? '✗' : a.severity === 'warn' ? '⚠' : 'ℹ'}
+      </div>
+      <div class="audit-content">
+        <div class="audit-title">${a.title}</div>
+        ${a.desc ? `<div class="audit-desc">${a.desc}</div>` : ''}
+        ${a.action ? `<div class="audit-action">💡 ${a.action}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ─── Paywall ─── */
+function showPaywall() {
+  document.getElementById('paywallModal').classList.remove('hidden');
+}
+function hidePaywall() {
+  document.getElementById('paywallModal').classList.add('hidden');
+}
+function startCheckout() {
+  // In production, use your real Stripe Payment Link here
+  window.open(STRIPE_PAYMENT_LINK, '_blank');
+  // For demo: simulate pro upgrade
+  // state.isPro = true;
+  // localStorage.setItem('sp_is_pro', 'true');
+  // hidePaywall();
+  // updatePlanBadge();
+  // toast('🎉 Welcome to SitePulse Pro!');
+}
+// Close paywall on clicking outside
+document.getElementById('paywallModal').addEventListener('click', function(e) {
+  if (e.target === this) hidePaywall();
+});
+// Check for Stripe redirect success
+window.addEventListener('load', () => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('checkout') === 'success') {
+    state.isPro = true;
+    localStorage.setItem('sp_is_pro', 'true');
+    updatePlanBadge();
+    toast('🎉 Payment confirmed! Welcome to SitePulse Pro.');
+    // Clean URL
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+});
+
+/* ─── Plan Badge ─── */
+function updatePlanBadge() {
+  const badge = document.getElementById('planBadge');
+  if (state.isPro) {
+    badge.className = 'badge badge-pro';
+    badge.textContent = '⭐ PRO · Unlimited';
+  } else {
+    const left = MAX_FREE_AUDITS - state.freeAuditsUsed;
+    badge.className = 'badge badge-free';
+    badge.textContent = `FREE · ${Math.max(0, left)} audit${left !== 1 ? 's' : ''} left`;
+  }
+}
+
+/* ─── History ─── */
+async function renderHistory() {
+  if (!state.auditHistory.length) {
+    state.auditHistory = await loadHistory();
+  }
+  const section = document.getElementById('historySection');
+  const list = document.getElementById('historyList');
+  if (state.auditHistory.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+  list.innerHTML = state.auditHistory.slice(0, 10).map(h => `
+    <div class="history-item" onclick="replayAudit('${h.url}')">
+      <span class="history-url">${h.url}</span>
+      <span class="history-date">${new Date(h.timestamp).toLocaleDateString()}</span>
+    </div>
+  `).join('');
+}
+
+function showHistory() {
+  document.getElementById('historySection').scrollIntoView({ behavior: 'smooth' });
+}
+
+function replayAudit(url) {
+  document.getElementById('urlInput').value = url;
+  runAudit();
+}
+
+async function clearHistory() {
+  await clearHistoryDB();
+}
+
+/* ─── Print Report ─── */
+function printReport() {
+  if (!state.currentReport) { toast('Run an audit first!'); return; }
+  window.print();
+}
+
+/* ─── Enter Key ─── */
+document.getElementById('urlInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') runAudit();
+});
+
+/* ─── Init ─── */
+(async function init() {
+  updatePlanBadge();
+  state.auditHistory = await loadHistory();
+  renderHistory();
+})();
+
+console.log('%c⚡ SitePulse Ready %c| %cEnter a URL and hit Analyze %c| %cv1.0',
+  'color:#a855f7;font-size:1.1rem;font-weight:bold;',
+  '',
+  'color:#8888a8;',
+  '',
+  'color:#00d2a0;');
+</script>
+</body>
+</html>
