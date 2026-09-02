@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ShiftForge — Offline Staff Rota Builder</title>
+<style>
+:root{
+  --bg:#0a0e13; --card:#141b25; --card2:#1a2330; --line:#232f3e; --line2:#2e3d50;
+  --tx:#e8eef6; --tx2:#9dafc4; --tx3:#6b7d94;
+  --acc:#5b9dff; --acc2:#2b6fd8; --pos:#3ddc97; --neg:#ff6b6b; --warn:#ffb454; --pur:#b98bfa; --tealo:#2dd4bf;
+  --sh:0 10px 30px rgba(0,0,0,.4); --r:14px; --rs:9px;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+}
+html[data-theme="light"]{
+  --bg:#f2f6fb; --card:#fff; --card2:#f6f9fc; --line:#dde5ee; --line2:#c9d5e3;
+  --tx:#0e1620; --tx2:#48596e; --tx3:#78899c;
+  --acc:#1466d4; --acc2:#0d4ba6; --pos:#0e9e6b; --neg:#d3362f; --warn:#a86a06; --pur:#6d40e6; --tealo:#0d9488;
+  --sh:0 8px 22px rgba(18,36,66,.10);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:radial-gradient(1000px 460px at 8% -6%,color-mix(in srgb,var(--acc) 15%,transparent),transparent 60%),
+             radial-gradient(900px 420px at 98% 0,color-mix(in srgb,var(--pur) 12%,transparent),transparent 60%),var(--bg);
+  color:var(--tx);font-family:var(--sans);font-size:14.5px;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh
+}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.01em}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:6px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+.appbar{position:sticky;top:0;z-index:50;display:flex;gap:12px;align-items:center;padding:10px 16px;
+  background:color-mix(in srgb,var(--bg) 84%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(145deg,var(--acc),var(--pur));display:grid;place-items:center;
+  color:#fff;font-weight:800;flex:none;box-shadow:var(--sh)}
+.brand{display:flex;gap:10px;align-items:center}
+.brand b{font-size:15.5px} .brand span{display:block;margin-top:-3px;font-size:11.5px;color:var(--tx3)}
+.spacer{flex:1}
+.pill{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--pos);border:1px solid color-mix(in srgb,var(--pos) 40%,transparent);
+  padding:4px 9px;border-radius:99px}
+.dot{width:6px;height:6px;border-radius:99px;background:var(--pos);box-shadow:0 0 8px var(--pos)}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;border-radius:var(--rs);border:1px solid var(--line2);
+  background:var(--card);cursor:pointer;font-size:13px;font-weight:550;transition:.14s;white-space:nowrap}
+.btn:hover{background:var(--card2);border-color:var(--acc);transform:translateY(-1px)}
+.btn.primary{background:linear-gradient(180deg,var(--acc),var(--acc2));border-color:transparent;color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent} .btn.sm{padding:5px 9px;font-size:12px}
+.btn.danger:hover{border-color:var(--neg);color:var(--neg)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+
+main{max-width:1420px;margin:0 auto;padding:18px 16px 70px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
+.pad{padding:15px}
+.grid{display:grid;gap:14px}
+.two{display:grid;grid-template-columns:1.5fr 1fr;gap:14px}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:1000px){.two,.three{grid-template-columns:1fr}}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:11px;margin-bottom:16px}
+.kpi{padding:13px 14px;border-radius:var(--r);background:var(--card);border:1px solid var(--line);position:relative;overflow:hidden}
+.kpi::after{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:var(--acc);opacity:.6}
+.kpi.g::after{background:var(--pos)}.kpi.r::after{background:var(--neg)}
+.kpi.w::after{background:var(--warn)}.kpi.p::after{background:var(--pur)}.kpi.t::after{background:var(--tealo)}
+.kpi .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3)}
+.kpi .v{font-size:22px;font-weight:700;margin-top:4px}
+.kpi .s{font-size:11.5px;color:var(--tx2);margin-top:2px}
+
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:4px 0 14px;overflow-x:auto}
+.tab{padding:9px 14px;border:0;background:transparent;color:var(--tx2);cursor:pointer;border-bottom:2px solid transparent;
+  font-weight:550;font-size:13.5px;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--tx);border-bottom-color:var(--acc)}
+.tab .c{background:var(--line);border-radius:99px;padding:1px 7px;font-size:11px;margin-left:6px}
+.panel[hidden]{display:none}
+
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px}
+.field{display:flex;flex-direction:column;gap:3px}
+.field label{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3)}
+input.txt,select.sel,textarea.txt{background:var(--card2);border:1px solid var(--line2);border-radius:7px;padding:6px 8px;font-size:13px;max-width:100%}
+input.txt:focus,select.sel:focus,textarea.txt:focus{border-color:var(--acc)}
+input.txt.mini{width:62px;text-align:right}
+.sw{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--tx2)}
+input[type=range]{accent-color:var(--acc);width:120px}
+
+.tblwrap{overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{position:sticky;top:0;z-index:2;background:var(--card2);text-align:left;padding:9px 11px;font-size:10.5px;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--tx3);border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 11px;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent);vertical-align:middle}
+tbody tr:hover{background:var(--card2)}
+.r{text-align:right}.c{text-align:center}.mut{color:var(--tx3)}
+
+.rota{table-layout:fixed}
+.rota th.rowh,.rota td.rowh{width:186px;position:sticky;left:0;z-index:3;background:var(--card2);border-right:1px solid var(--line)}
+.rota td.rowh{font-size:13px}
+.rota td{vertical-align:top;padding:7px 6px;min-height:64px}
+.rota th.dayh{text-align:center}
+.rota th.dayh small{display:block;font-weight:400;color:var(--tx3);font-size:11px}
+.rota th.dayh.we{color:var(--pur)}
+.cell{display:flex;flex-direction:column;gap:5px;min-height:34px}
+.cell.off{align-items:center;justify-content:center;color:var(--tx3);font-size:12px;min-height:34px}
+.chip{display:flex;align-items:center;gap:6px;width:100%;text-align:left;padding:5px 7px;border-radius:8px;cursor:pointer;
+  border:1px solid var(--line2);background:var(--card2);font-size:12.5px;transition:.12s}
+.chip:hover{border-color:var(--acc);transform:translateY(-1px)}
+.chip .rl{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);flex:none}
+.chip .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:550}
+.chip.empty{border-style:dashed;color:var(--neg);border-color:color-mix(in srgb,var(--neg) 45%,transparent);
+  background:color-mix(in srgb,var(--neg) 8%,transparent)}
+.chip.lock{border-color:color-mix(in srgb,var(--acc) 60%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--acc) 25%,transparent)}
+.chip.soft{border-color:color-mix(in srgb,var(--warn) 55%,transparent)}
+.chip.bad{border-color:var(--neg);background:color-mix(in srgb,var(--neg) 14%,transparent)}
+.tplbar{width:3px;align-self:stretch;border-radius:99px;flex:none}
+
+.badge{display:inline-block;padding:2px 7px;border-radius:99px;font-size:11px;font-weight:600;border:1px solid var(--line2);background:var(--card2);white-space:nowrap}
+.badge.g{color:var(--pos);border-color:color-mix(in srgb,var(--pos) 45%,transparent)}
+.badge.r{color:var(--neg);border-color:color-mix(in srgb,var(--neg) 45%,transparent)}
+.badge.w{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
+.badge.b{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 45%,transparent)}
+.badge.p{color:var(--pur);border-color:color-mix(in srgb,var(--pur) 45%,transparent)}
+
+.av{display:inline-flex;gap:3px}
+.av button{width:26px;height:26px;border-radius:7px;border:1px solid var(--line2);background:var(--card2);cursor:pointer;font-size:11px;
+  color:var(--tx2);padding:0;font-weight:600}
+.av button[data-v="y"]{background:color-mix(in srgb,var(--pos) 20%,transparent);color:var(--pos);border-color:color-mix(in srgb,var(--pos) 45%,transparent)}
+.av button[data-v="s"]{background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
+.av button[data-v="n"]{background:color-mix(in srgb,var(--neg) 18%,transparent);color:var(--neg);border-color:color-mix(in srgb,var(--neg) 45%,transparent)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--tx3);margin-top:10px}
+.legend i{font-style:normal;font-weight:700}
+
+.sec-h{display:flex;align-items:center;gap:10px;margin-bottom:11px;flex-wrap:wrap}
+.sec-h h3{font-size:15px} .sec-h p{margin:0;color:var(--tx3);font-size:12.5px}
+.bars{display:grid;gap:10px}
+.bar .lbl{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:3px}
+.bar .track{position:relative;height:9px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar .fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--acc),var(--pur))}
+.bar .fill.over{background:linear-gradient(90deg,var(--warn),var(--neg))}
+.bar .tgt{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--tx2);opacity:.85}
+.hm{display:grid;gap:3px}
+.hmrow{display:grid;grid-template-columns:150px repeat(7,1fr);gap:3px;align-items:center}
+.hmrow .h{font-size:12px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hc{height:30px;border-radius:6px;display:grid;place-items:center;font-size:11.5px;border:1px solid var(--line)}
+.issue{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
+.issue:last-child{border-bottom:0}
+.issue .ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:none;background:var(--card2);border:1px solid var(--line2);font-size:13px}
+.issue b{display:block;font-size:13px}.issue span{font-size:12.5px;color:var(--tx2)}
+.none{padding:26px;text-align:center;color:var(--tx3)}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,24px);z-index:90;background:var(--card);border:1px solid var(--line2);
+  border-left:3px solid var(--acc);border-radius:10px;padding:11px 16px;box-shadow:var(--sh);opacity:0;transition:.22s;max-width:92vw}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.toast.err{border-left-color:var(--neg)}.toast.ok{border-left-color:var(--pos)}
+dialog{border:1px solid var(--line2);border-radius:var(--r);background:var(--card);color:var(--tx);padding:0;width:calc(100% - 32px);max-width:640px;box-shadow:0 24px 70px rgba(0,0,0,.55)}
+dialog::backdrop{background:rgba(3,6,10,.6);backdrop-filter:blur(3px)}
+.dh{padding:14px 17px;border-bottom:1px solid var(--line)}
+.db{padding:6px 17px;max-height:58vh;overflow:auto}
+.df{padding:12px 17px;border-top:1px solid var(--line);display:flex;gap:9px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.cand{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid color-mix(in srgb,var(--line) 55%,transparent)}
+.cand:last-child{border-bottom:0}
+.cand .who{flex:1;min-width:0}
+.cand .who b{display:block;font-size:13.5px}
+.cand .who span{font-size:12px;color:var(--tx3)}
+footer{text-align:center;color:var(--tx3);font-size:12px;padding:22px 14px 36px}
+kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line2);border-bottom-width:2px;border-radius:5px;padding:1px 5px;background:var(--card2)}
+@media print{
+  body{background:#fff;color:#000}
+  .appbar,.tabs,.toolbar,.noprint,footer,.legend{display:none!important}
+  .card{box-shadow:none;border:1px solid #bbb;break-inside:avoid}
+  .panel[hidden]{display:none!important}
+  .tblwrap{overflow:visible}
+  .chip{border-color:#999}
+  main{max-width:none;padding:0}
+}
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <div class="brand"><div class="logo">S</div><div><b>ShiftForge</b><span>Offline staff rota builder &amp; solver</span></div></div>
+  <div class="pill" title="No network requests, no storage APIs."><i class="dot"></i> 100% local</div>
+  <div class="spacer"></div>
+  <button class="btn ghost sm" id="bTheme">◐ Theme</button>
+  <button class="btn ghost sm" id="bDemo">▶ Demo team</button>
+  <button class="btn ghost sm" id="bLoad">↑ Load</button>
+  <button class="btn ghost sm" id="bSave">↓ Save</button>
+  <button class="btn ghost sm" id="bPrint">⎙ Print</button>
+  <button class="btn primary" id="bSolve">⚡ Build rota</button>
+</header>
+
+<main>
+  <div class="toolbar noprint">
+    <div class="field"><label for="week">Week starting</label><input class="txt" type="date" id="week"></div>
+    <div class="field"><label for="rest">Min rest (h)</label><input class="txt mini" type="number" id="rest" min="0" max="24" step="1"></div>
+    <div class="field"><label for="wFair">Fairness</label><input type="range" id="wFair" min="0" max="2" step="0.25"></div>
+    <div class="field"><label for="wReq">Honour requests</label><input type="range" id="wReq" min="0" max="2" step="0.25"></div>
+    <div class="field"><label for="wCont">Continuity</label><input type="range" id="wCont" min="0" max="2" step="0.25"></div>
+    <div class="field"><label>&nbsp;</label><label class="sw"><input type="checkbox" id="oneADay"> One shift per day</label></div>
+    <div class="field"><label>&nbsp;</label><label class="sw"><input type="checkbox" id="minCost"> Favour lower wage cost</label></div>
+    <div class="spacer"></div>
+    <button class="btn sm" id="bClear">Clear unlocked</button>
+    <button class="btn sm" id="bUnlock">Unlock all</button>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="tabs noprint" role="tablist">
+    <button class="tab" role="tab" id="tab-rota" aria-selected="true">Rota</button>
+    <button class="tab" role="tab" id="tab-team" aria-selected="false">Team <span class="c" id="cTeam">0</span></button>
+    <button class="tab" role="tab" id="tab-shift" aria-selected="false">Shifts <span class="c" id="cShift">0</span></button>
+    <button class="tab" role="tab" id="tab-ins" aria-selected="false">Insights</button>
+    <button class="tab" role="tab" id="tab-exp" aria-selected="false">Export</button>
+  </div>
+
+  <section class="panel" id="p-rota">
+    <div class="card">
+      <div class="tblwrap"><table class="rota"><thead><tr id="rotaHead"></tr></thead><tbody id="rotaBody"></tbody></table></div>
+    </div>
+    <div class="legend noprint">
+      <span><i style="color:var(--neg)">▢</i> unfilled — click to see who could take it</span>
+      <span><i style="color:var(--acc)">🔒</i> locked, the solver won't touch it</span>
+      <span><i style="color:var(--warn)">▢</i> assigned on a soft day-off request</span>
+      <span><i style="color:var(--neg)">!</i> forced against a hard rule</span>
+    </div>
+  </section>
+
+  <section class="panel" id="p-team" hidden>
+    <div class="grid">
+      <div class="card">
+        <div class="pad sec-h"><h3>Team</h3><p>Click a day to cycle: available → soft day-off request → hard unavailable.</p>
+          <div class="spacer"></div><button class="btn sm primary noprint" id="bAddStaff">+ Add person</button></div>
+        <div class="tblwrap"><table>
+          <thead><tr><th>Name</th><th>Roles (comma separated)</th><th class="r">Max h</th><th class="r">Min h</th>
+            <th class="r">Max days</th><th class="r">Rate</th><th class="c">Availability</th><th></th></tr></thead>
+          <tbody id="teamBody"></tbody></table></div>
+      </div>
+      <div class="card pad noprint">
+        <div class="sec-h"><h3>Bulk add</h3><p>One person per line: <code>Name | Roles | MaxHours | MinHours | Rate</code></p></div>
+        <textarea class="txt" id="bulk" rows="4" style="width:100%" placeholder="Dana Okoye | Barista, Lead | 32 | 12 | 15.50"></textarea>
+        <div style="margin-top:9px;display:flex;gap:9px"><button class="btn primary" id="bBulk">Add people</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-shift" hidden>
+    <div class="card">
+      <div class="pad sec-h"><h3>Shift patterns</h3><p>Needs format: <code>Barista x2, Lead x1</code>. An end time earlier than the start means an overnight shift.</p>
+        <div class="spacer"></div><button class="btn sm primary noprint" id="bAddTpl">+ Add shift</button></div>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Shift name</th><th class="r">Start</th><th class="r">End</th><th class="r">Hours</th><th>Needs</th><th class="c">Runs on</th><th></th></tr></thead>
+        <tbody id="tplBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-ins" hidden>
+    <div class="grid">
+      <div class="two">
+        <div class="card pad">
+          <div class="sec-h"><h3>Hours per person</h3><p>Bar is assigned hours, the notch is a fair proportional share of the work.</p></div>
+          <div class="bars" id="hoursBars"></div>
+        </div>
+        <div class="card pad">
+          <div class="sec-h"><h3>What needs your attention</h3></div>
+          <div id="issues"></div>
+        </div>
+      </div>
+      <div class="card pad">
+        <div class="sec-h"><h3>Coverage heatmap</h3><p>Filled slots vs required headcount, per shift and day.</p></div>
+        <div class="hm" id="heat"></div>
+      </div>
+      <div class="two">
+        <div class="card pad">
+          <div class="sec-h"><h3>Why slots went unfilled</h3></div>
+          <div class="tblwrap" style="max-height:340px"><table>
+            <thead><tr><th>Slot</th><th>Blocking reasons across the team</th></tr></thead>
+            <tbody id="unfBody"></tbody></table></div>
+        </div>
+        <div class="card pad">
+          <div class="sec-h"><h3>Per-person summary</h3></div>
+          <div class="tblwrap" style="max-height:340px"><table>
+            <thead><tr><th>Name</th><th class="r">Shifts</th><th class="r">Hours</th><th class="r">Days</th><th class="r">Wage</th><th>Flags</th></tr></thead>
+            <tbody id="sumBody"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-exp" hidden>
+    <div class="three">
+      <div class="card pad"><div class="sec-h"><h3>For the wall</h3></div>
+        <p class="mut" style="font-size:13px">The grid as a spreadsheet, or plain text you can paste into a group chat.</p>
+        <div style="display:flex;gap:9px;flex-wrap:wrap"><button class="btn primary" id="eGrid">↓ rota-grid.csv</button>
+        <button class="btn" id="eCopy">⧉ Copy as text</button></div></div>
+      <div class="card pad"><div class="sec-h"><h3>For payroll &amp; phones</h3></div>
+        <p class="mut" style="font-size:13px">One row per shift with hours and wage, or a calendar file each person can import.</p>
+        <div style="display:flex;gap:9px;flex-wrap:wrap"><button class="btn" id="eShifts">↓ shifts.csv</button>
+        <button class="btn" id="eIcs">↓ rota.ics</button></div></div>
+      <div class="card pad"><div class="sec-h"><h3>Session</h3></div>
+        <p class="mut" style="font-size:13px">This app uses no browser storage. The session file is your save — keep it next week and just re-solve.</p>
+        <div style="display:flex;gap:9px;flex-wrap:wrap"><button class="btn primary" id="eSess">↓ session.json</button></div></div>
+    </div>
+  </section>
+</main>
+
+<footer>ShiftForge · nothing leaves this tab · <kbd>1</kbd>–<kbd>5</kbd> tabs · <kbd>B</kbd> build rota</footer>
+
+<input type="file" id="fileIn" accept=".json,application/json" hidden>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<dialog id="dlg">
+  <div class="dh"><h3 id="dlgT">Assign shift</h3><p class="mut" id="dlgS" style="margin:3px 0 0;font-size:12.5px"></p></div>
+  <div class="db" id="dlgB"></div>
+  <div class="df">
+    <label class="sw"><input type="checkbox" id="dlgLock"> Lock this slot</label>
+    <div style="display:flex;gap:9px">
+      <button class="btn danger" id="dlgClear">Leave unfilled</button>
+      <button class="btn" id="dlgClose">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+'use strict';
+(function(){
+/* ------------------------------------------------------------------ util */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sum=a=>a.reduce((x,y)=>x+y,0);
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const uid=p=>p+Math.random().toString(36).slice(2,8);
+const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+let toastT;
+function toast(m,k){const t=$('#toast');t.textContent=m;t.className='toast on '+(k||'');clearTimeout(toastT);
+  toastT=setTimeout(()=>t.className='toast '+(k||''),3600);}
+function download(n,txt,mime){const b=new Blob([txt],{type:(mime||'text/plain')+';charset=utf-8'});
+  const u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=n;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),1500);}
+const cell=v=>{v=v==null?'':String(v);return /[",\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+const toCSV=rows=>rows.map(r=>r.map(cell).join(',')).join('\r\n');
+const t2m=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(String(t)||'');return m?(+m[1])*60+(+m[2]):0;};
+const m2t=m=>String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+const h1=n=>(Math.round(n*10)/10).toString();
+
+/* ----------------------------------------------------------------- state */
+const state={
+  week:'', staff:[], tpls:[], assign:{}, locks:{},
+  opts:{rest:11,oneADay:true,wFair:1,wReq:1,wCont:1,minCost:false,cur:'£'}
+};
+let SL=[], SLM=new Map();
+const S=id=>state.staff.find(x=>x.id===id);
+const T=id=>state.tpls.find(x=>x.id===id);
+
+function nextMonday(){const d=new Date();d.setHours(0,0,0,0);const add=(8-d.getDay())%7||7;d.setDate(d.getDate()+add);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function weekDate(i){const p=(state.week||nextMonday()).split('-').map(Number);
+  return new Date(p[0],p[1]-1,p[2]+i);}
+const dayName=i=>WD[weekDate(i).getDay()];
+const dayLabel=i=>{const d=weekDate(i);return WD[d.getDay()]+' '+d.getDate()+' '+MO[d.getMonth()];};
+const isWE=i=>[0,6].includes(weekDate(i).getDay());
+
+/* ------------------------------------------------------------- slot model */
+function durOf(tpl){let a=t2m(tpl.start),b=t2m(tpl.end);if(b<=a)b+=1440;return b-a;}
+function buildSlots(){
+  SL=[];
+  for(const tpl of state.tpls){
+    const dur=durOf(tpl);
+    if(dur<=0) continue;
+    for(let d=0;d<7;d++){
+      if(!tpl.days[d]) continue;
+      tpl.needs.forEach((nd,ni)=>{
+        for(let k=0;k<nd.count;k++){
+          const st=d*1440+t2m(tpl.start);
+          SL.push({id:tpl.id+'|'+d+'|'+ni+'|'+k,tpl:tpl.id,day:d,role:nd.role,start:st,end:st+dur,dur});
+        }
+      });
+    }
+  }
+  SLM=new Map(SL.map(s=>[s.id,s]));
+  for(const k of Object.keys(state.assign)) if(!SLM.has(k)) delete state.assign[k];
+  for(const k of Object.keys(state.locks)) if(!SLM.has(k)) delete state.locks[k];
+  for(const k of Object.keys(state.assign)) if(!S(state.assign[k])) delete state.assign[k];
+}
+const slotsOf=id=>SL.filter(s=>state.assign[s.id]===id);
+
+/* --------------------------------------------------------- hard rules */
+function checkAll(st,slots){
+  const out=[];
+  if(!st) return ['unknown person'];
+  const per=new Map();
+  for(const s of slots){
+    if(!st.roles.some(r=>r.toLowerCase()===s.role.toLowerCase())) out.push('no “'+s.role+'” role');
+    if(st.day[s.day]==='n') out.push('unavailable '+dayName(s.day));
+    per.set(s.day,(per.get(s.day)||0)+1);
+  }
+  const h=sum(slots.map(s=>s.dur))/60;
+  if(h>st.maxH+1e-9) out.push(h1(h)+'h exceeds '+st.maxH+'h cap');
+  if(state.opts.oneADay) for(const [d,n] of per) if(n>1) out.push(n+' shifts on '+dayName(d));
+  const rest=state.opts.rest*60;
+  const ss=slots.slice().sort((a,b)=>a.start-b.start);
+  for(let i=0;i<ss.length;i++)for(let j=i+1;j<ss.length;j++){
+    const a=ss[i],b=ss[j];
+    if(a.start<b.end&&b.start<a.end) out.push('overlapping shifts');
+    else if(b.start-a.end<rest&&b.start>=a.end) out.push('under '+state.opts.rest+'h rest');
+  }
+  const days=[...new Set(slots.map(s=>s.day))].sort((a,b)=>a-b);
+  let run=0,best=0;
+  for(let d=0;d<7;d++){ if(days.includes(d)){run++;best=Math.max(best,run);} else run=0; }
+  if(best>st.maxD) out.push(best+' days in a row (max '+st.maxD+')');
+  return out;
+}
+function blockReason(staffId,slot){
+  const st=S(staffId);
+  const cur=slotsOf(staffId).filter(s=>s.id!==slot.id);
+  const before=checkAll(st,cur).length;
+  const after=checkAll(st,cur.concat([slot]));
+  if(after.length<=before) return null;
+  const b=new Set(checkAll(st,cur));
+  return after.find(r=>!b.has(r))||after[after.length-1];
+}
+
+/* ------------------------------------------------------------------ cost */
+function cost(){
+  const o=state.opts;
+  let unfilled=0,soft=0,pay=0,fair=0,cont=0,minShort=0,breach=0;
+  const H=new Map(), TP=new Map(), BR=new Map();
+  for(const st of state.staff){H.set(st.id,0);TP.set(st.id,new Set());}
+  for(const s of SL){
+    const a=state.assign[s.id];
+    if(!a){unfilled++;continue;}
+    const st=S(a); if(!st) continue;
+    H.set(a,H.get(a)+s.dur/60);
+    TP.get(a).add(s.tpl);
+    if(st.day[s.day]==='s') soft++;
+    pay+=s.dur/60*(st.rate||0);
+  }
+  let totH=0; for(const v of H.values()) totH+=v;
+  const sMax=sum(state.staff.map(x=>x.maxH))||1;
+  for(const st of state.staff){
+    const h=H.get(st.id), tgt=totH*st.maxH/sMax;
+    fair+=(h-tgt)*(h-tgt);
+    cont+=Math.max(0,TP.get(st.id).size-1);
+    if(h<st.minH) minShort+=st.minH-h;
+    const v=checkAll(st,slotsOf(st.id)).length;
+    if(v){breach+=v;BR.set(st.id,v);}
+  }
+  return {total:200000*unfilled+30000*breach+2500*minShort+25*o.wFair*fair+300*o.wReq*soft+70*o.wCont*cont+(o.minCost?3*pay:0),
+    unfilled,soft,pay,fair,cont,minShort,breach,H,TP,totH};
+}
+
+/* ----------------------------------------------------------------- solver */
+function solve(){
+  buildSlots();
+  if(!state.staff.length) return toast('Add some people to the team first.','err');
+  if(!SL.length) return toast('No shift slots defined — set up shift patterns first.','err');
+  const t0=performance.now();
+  for(const s of SL) if(!state.locks[s.id]) delete state.assign[s.id];
+
+  /* pass 1: most-constrained slot first, cheapest feasible person */
+  let todo=SL.filter(s=>!state.assign[s.id]);
+  while(todo.length){
+    let bi=0,bn=Infinity,bd=-1;
+    for(let i=0;i<todo.length;i++){
+      const s=todo[i];
+      let n=0; for(const st of state.staff) if(!blockReason(st.id,s)) n++;
+      if(n<bn||(n===bn&&s.dur>bd)){bi=i;bn=n;bd=s.dur;}
+    }
+    const s=todo.splice(bi,1)[0];
+    let best=null,bc=Infinity;
+    for(const st of state.staff){
+      if(blockReason(st.id,s)) continue;
+      state.assign[s.id]=st.id;
+      const c=cost().total;
+      delete state.assign[s.id];
+      if(c<bc){bc=c;best=st.id;}
+    }
+    if(best) state.assign[s.id]=best;
+  }
+
+  /* pass 2: simulated annealing over reassign / swap moves */
+  const free=SL.filter(s=>!state.locks[s.id]);
+  if(free.length>1){
+    const iters=clamp(3000+free.length*140,3000,24000);
+    let cur=cost().total, T0=Math.max(600,cur*0.004);
+    const R=()=>Math.random();
+    for(let it=0;it<iters;it++){
+      const T=T0*Math.pow(0.0006/1,it/iters)||1e-6;
+      const a=free[(R()*free.length)|0];
+      let undo;
+      if(R()<0.5){
+        const to=R()<0.12?'':state.staff[(R()*state.staff.length)|0].id;
+        const from=state.assign[a.id]||'';
+        if(from===to) continue;
+        undo=()=>{ if(from) state.assign[a.id]=from; else delete state.assign[a.id]; };
+        if(to) state.assign[a.id]=to; else delete state.assign[a.id];
+      }else{
+        const b=free[(R()*free.length)|0];
+        if(b.id===a.id) continue;
+        const x=state.assign[a.id]||'', y=state.assign[b.id]||'';
+        if(x===y) continue;
+        undo=()=>{ x?state.assign[a.id]=x:delete state.assign[a.id]; y?state.assign[b.id]=y:delete state.assign[b.id]; };
+        y?state.assign[a.id]=y:delete state.assign[a.id];
+        x?state.assign[b.id]=x:delete state.assign[b.id];
+      }
+      const c=cost().total;
+      if(c<=cur||R()<Math.exp((cur-c)/Math.max(T,1e-6))) cur=c; else undo();
+    }
+  }
+  const m=cost(), ms=Math.round(performance.now()-t0);
+  render();
+  toast('Rota built in '+ms+'ms — '+(SL.length-m.unfilled)+'/'+SL.length+' slots filled, '+
+        m.soft+' day-off request'+(m.soft===1?'':'s')+' overridden.', m.unfilled?'':'ok');
+}
+
+/* ----------------------------------------------------------------- render */
+function render(){
+  buildSlots();
+  renderKPIs(); renderRota(); renderTeam(); renderTpls(); renderInsights();
+  $('#cTeam').textContent=state.staff.length;
+  $('#cShift').textContent=state.tpls.length;
+}
+function renderKPIs(){
+  const m=cost(), filled=SL.length-m.unfilled;
+  const cap=sum(state.staff.map(s=>s.maxH)), demand=sum(SL.map(s=>s.dur))/60;
+  const hs=state.staff.map(s=>m.H.get(s.id)||0);
+  const spread=hs.length?Math.max(...hs)-Math.min(...hs):0;
+  const reqTot=state.staff.reduce((n,s)=>n+s.day.filter(v=>v==='s').length,0);
+  const k=[
+    ['Coverage',SL.length?Math.round(filled/SL.length*100)+'%':'—',filled+' of '+SL.length+' slots',m.unfilled?'r':'g'],
+    ['Rostered hours',h1(m.totH)+'h','demand '+h1(demand)+'h · capacity '+h1(cap)+'h',demand>cap?'w':'t'],
+    ['Wage cost',state.opts.cur+Math.round(m.pay).toLocaleString(),'at listed hourly rates','p'],
+    ['Fairness spread',h1(spread)+'h','between the busiest and quietest',spread>12?'w':'g'],
+    ['Requests honoured',reqTot?Math.round((1-m.soft/reqTot)*100)+'%':'100%',m.soft+' of '+reqTot+' soft days used','w'],
+    ['Rule breaches',String(m.breach),m.breach?'forced overrides in place':'all hard rules respected',m.breach?'r':'g']
+  ];
+  $('#kpis').innerHTML=k.map(([a,b,c,d])=>'<div class="kpi '+d+'"><div class="k">'+a+'</div><div class="v num">'+b+
+    '</div><div class="s">'+c+'</div></div>').join('');
+}
+function renderRota(){
+  $('#rotaHead').innerHTML='<th class="rowh">Shift</th>'+[0,1,2,3,4,5,6].map(i=>{
+    const d=weekDate(i);
+    return '<th class="dayh'+(isWE(i)?' we':'')+'">'+WD[d.getDay()]+'<small>'+d.getDate()+' '+MO[d.getMonth()]+'</small></th>';}).join('');
+  if(!state.tpls.length){ $('#rotaBody').innerHTML='<tr><td colspan="8" class="none">No shift patterns yet — add some in the Shifts tab.</td></tr>'; return; }
+  $('#rotaBody').innerHTML=state.tpls.map(tpl=>{
+    const dur=durOf(tpl)/60;
+    let row='<td class="rowh"><b>'+esc(tpl.name)+'</b><div class="mut num" style="font-size:11.5px">'+
+      esc(tpl.start)+'–'+esc(tpl.end)+' · '+h1(dur)+'h</div><div class="mut" style="font-size:11px">'+
+      esc(tpl.needs.map(n=>n.role+' ×'+n.count).join(', '))+'</div></td>';
+    for(let d=0;d<7;d++){
+      if(!tpl.days[d]){ row+='<td><div class="cell off">—</div></td>'; continue; }
+      const slots=SL.filter(s=>s.tpl===tpl.id&&s.day===d);
+      row+='<td><div class="cell">'+slots.map(s=>{
+        const a=state.assign[s.id], st=a?S(a):null;
+        const cls=[];
+        if(!st) cls.push('empty');
+        if(state.locks[s.id]) cls.push('lock');
+        if(st&&st.day[d]==='s') cls.push('soft');
+        if(st&&blockReasonStatic(st,s)) cls.push('bad');
+        return '<button class="chip '+cls.join(' ')+'" data-slot="'+s.id+'" title="'+esc(s.role)+' · click to change">'+
+          '<span class="tplbar" style="background:'+esc(tpl.color)+'"></span>'+
+          '<span class="nm">'+(st?esc(st.name):'unfilled')+'</span>'+
+          '<span class="rl">'+esc(s.role)+'</span>'+(state.locks[s.id]?'<span>🔒</span>':'')+'</button>';
+      }).join('')+'</div></td>';
+    }
+    return '<tr>'+row+'</tr>';
+  }).join('');
+}
+function blockReasonStatic(st,s){
+  const all=checkAll(st,slotsOf(st.id));
+  if(!all.length) return null;
+  const without=checkAll(st,slotsOf(st.id).filter(x=>x.id!==s.id));
+  return all.length>without.length?all[all.length-1]:null;
+}
+function renderTeam(){
+  $('#teamBody').innerHTML=state.staff.map(s=>
+    '<tr><td><input class="txt" data-s="'+s.id+'" data-k="name" value="'+esc(s.name)+'" size="14"></td>'+
+    '<td><input class="txt" data-s="'+s.id+'" data-k="roles" value="'+esc(s.roles.join(', '))+'" size="20"></td>'+
+    '<td class="r"><input class="txt mini" type="number" min="0" max="80" data-s="'+s.id+'" data-k="maxH" value="'+s.maxH+'"></td>'+
+    '<td class="r"><input class="txt mini" type="number" min="0" max="80" data-s="'+s.id+'" data-k="minH" value="'+s.minH+'"></td>'+
+    '<td class="r"><input class="txt mini" type="number" min="1" max="7" data-s="'+s.id+'" data-k="maxD" value="'+s.maxD+'"></td>'+
+    '<td class="r"><input class="txt mini" type="number" min="0" step="0.25" data-s="'+s.id+'" data-k="rate" value="'+s.rate+'"></td>'+
+    '<td class="c"><span class="av">'+[0,1,2,3,4,5,6].map(i=>
+      '<button data-av="'+s.id+'" data-d="'+i+'" data-v="'+s.day[i]+'" title="'+dayLabel(i)+'">'+dayName(i)[0]+'</button>').join('')+'</span></td>'+
+    '<td class="noprint"><button class="btn sm danger" data-del-s="'+s.id+'">✕</button></td></tr>'
+  ).join('')||'<tr><td colspan="8" class="none">No people yet.</td></tr>';
+}
+function renderTpls(){
+  $('#tplBody').innerHTML=state.tpls.map(t=>
+    '<tr><td><input class="txt" data-t="'+t.id+'" data-k="name" value="'+esc(t.name)+'" size="14"></td>'+
+    '<td class="r"><input class="txt mini" data-t="'+t.id+'" data-k="start" value="'+esc(t.start)+'"></td>'+
+    '<td class="r"><input class="txt mini" data-t="'+t.id+'" data-k="end" value="'+esc(t.end)+'"></td>'+
+    '<td class="r num mut">'+h1(durOf(t)/60)+'</td>'+
+    '<td><input class="txt" data-t="'+t.id+'" data-k="needs" value="'+esc(t.needs.map(n=>n.role+' x'+n.count).join(', '))+'" size="24"></td>'+
+    '<td class="c">'+[0,1,2,3,4,5,6].map(i=>
+      '<label class="sw" style="display:inline-flex;margin-right:6px"><input type="checkbox" data-day="'+t.id+'" data-d="'+i+'"'+
+      (t.days[i]?' checked':'')+'><span style="font-size:11px">'+dayName(i)[0]+'</span></label>').join('')+'</td>'+
+    '<td class="noprint"><button class="btn sm danger" data-del-t="'+t.id+'">✕</button></td></tr>'
+  ).join('')||'<tr><td colspan="7" class="none">No shifts yet.</td></tr>';
+}
+function renderInsights(){
+  const m=cost();
+  const sMax=sum(state.staff.map(x=>x.maxH))||1;
+  const maxBar=Math.max(1,...state.staff.map(s=>Math.max(s.maxH,m.H.get(s.id)||0)));
+  $('#hoursBars').innerHTML=state.staff.map(s=>{
+    const h=m.H.get(s.id)||0, tgt=m.totH*s.maxH/sMax;
+    return '<div class="bar"><div class="lbl"><span>'+esc(s.name)+'</span><span class="num mut">'+h1(h)+'h / cap '+s.maxH+
+      'h · fair '+h1(tgt)+'h</span></div><div class="track"><div class="fill'+(h>s.maxH?' over':'')+'" style="width:'+
+      (h/maxBar*100).toFixed(1)+'%"></div><div class="tgt" style="left:'+clamp(tgt/maxBar*100,0,99.6).toFixed(1)+'%"></div></div></div>';
+  }).join('')||'<div class="none">No team members.</div>';
+
+  const it=[];
+  if(m.unfilled) it.push(['▢','var(--neg)',m.unfilled+' slot'+(m.unfilled>1?'s':'')+' unfilled',
+    'See the breakdown below — usually a missing role or everyone at their hours cap.']);
+  if(m.breach) it.push(['!','var(--neg)',m.breach+' hard rule breach'+(m.breach>1?'es':''),
+    'These come from manual overrides. Chips outlined in red on the rota.']);
+  if(m.minShort>0.01) it.push(['↓','var(--warn)',h1(m.minShort)+'h below contracted minimums',
+    'Somebody is short of their guaranteed hours — check the bars on the left.']);
+  if(m.soft) it.push(['~','var(--warn)',m.soft+' soft day-off request'+(m.soft>1?'s':'')+' used',
+    'Raise the “Honour requests” slider and rebuild to push these down.']);
+  const roles=new Set(state.staff.flatMap(s=>s.roles.map(r=>r.toLowerCase())));
+  const missing=[...new Set(SL.map(s=>s.role))].filter(r=>!roles.has(r.toLowerCase()));
+  if(missing.length) it.push(['?','var(--neg)','No one holds: '+esc(missing.join(', ')),
+    'Those slots can never be filled until somebody is given the role.']);
+  const cap=sum(state.staff.map(s=>s.maxH)), demand=sum(SL.map(s=>s.dur))/60;
+  if(demand>cap) it.push(['⚖','var(--warn)','Short by '+h1(demand-cap)+'h of contracted capacity',
+    'Demand is '+h1(demand)+'h, the team caps total '+h1(cap)+'h. No solver can close that gap.']);
+  if(!it.length) it.push(['✓','var(--pos)','Fully covered, every rule respected','Print it or export the calendar files.']);
+  $('#issues').innerHTML=it.map(([i,c,t,s])=>'<div class="issue"><div class="ic" style="color:'+c+'">'+i+
+    '</div><div><b>'+t+'</b><span>'+s+'</span></div></div>').join('');
+
+  $('#heat').innerHTML='<div class="hmrow"><div class="h"></div>'+[0,1,2,3,4,5,6].map(i=>
+    '<div class="h" style="text-align:center">'+dayName(i)+'</div>').join('')+'</div>'+
+    state.tpls.map(t=>'<div class="hmrow"><div class="h" title="'+esc(t.name)+'">'+esc(t.name)+'</div>'+
+      [0,1,2,3,4,5,6].map(d=>{
+        const ss=SL.filter(s=>s.tpl===t.id&&s.day===d);
+        if(!ss.length) return '<div class="hc mut" style="opacity:.4">·</div>';
+        const f=ss.filter(s=>state.assign[s.id]).length;
+        const p=f/ss.length;
+        const col=p===1?'var(--pos)':p===0?'var(--neg)':'var(--warn)';
+        return '<div class="hc num" style="background:color-mix(in srgb,'+col+' 18%,transparent);color:'+col+
+          '">'+f+'/'+ss.length+'</div>';
+      }).join('')+'</div>').join('');
+
+  const unf=SL.filter(s=>!state.assign[s.id]);
+  $('#unfBody').innerHTML=unf.map(s=>{
+    const tal=new Map();
+    for(const st of state.staff){const r=blockReason(st.id,s); if(r) tal.set(r,(tal.get(r)||0)+1);}
+    const txt=[...tal].sort((a,b)=>b[1]-a[1]).map(([r,n])=>n+'× '+esc(r)).join(' · ')||'someone is free — hit Build rota';
+    return '<tr><td>'+esc(T(s.tpl).name)+' · '+dayName(s.day)+' · '+esc(s.role)+'</td><td class="mut" style="font-size:12.5px">'+txt+'</td></tr>';
+  }).join('')||'<tr><td colspan="2" class="none">Nothing unfilled.</td></tr>';
+
+  $('#sumBody').innerHTML=state.staff.map(s=>{
+    const ms=slotsOf(s.id), h=sum(ms.map(x=>x.dur))/60, days=new Set(ms.map(x=>x.day)).size;
+    const v=checkAll(s,ms), softn=ms.filter(x=>s.day[x.day]==='s').length;
+    const fl=[];
+    if(v.length) fl.push('<span class="badge r">'+esc(v[0])+'</span>');
+    if(softn) fl.push('<span class="badge w">'+softn+' request'+(softn>1?'s':'')+' used</span>');
+    if(h<s.minH) fl.push('<span class="badge b">under minimum</span>');
+    if(!fl.length) fl.push('<span class="badge g">clean</span>');
+    return '<tr><td>'+esc(s.name)+'</td><td class="r num">'+ms.length+'</td><td class="r num">'+h1(h)+
+      '</td><td class="r num mut">'+days+'</td><td class="r num">'+state.opts.cur+(h*(s.rate||0)).toFixed(2)+
+      '</td><td>'+fl.join(' ')+'</td></tr>';
+  }).join('')||'<tr><td colspan="6" class="none">No team.</td></tr>';
+}
+
+/* ---------------------------------------------------------- assign dialog */
+let cur=null;
+function openSlot(id){
+  const s=SLM.get(id); if(!s) return;
+  cur=id;
+  const tpl=T(s.tpl);
+  $('#dlgT').textContent=tpl.name+' — '+dayLabel(s.day);
+  $('#dlgS').textContent=tpl.start+'–'+tpl.end+' · '+h1(s.dur/60)+'h · role: '+s.role;
+  $('#dlgLock').checked=!!state.locks[id];
+  const rows=state.staff.map(st=>{
+    const r=blockReason(st.id,s), assigned=state.assign[id]===st.id;
+    const h=sum(slotsOf(st.id).map(x=>x.dur))/60;
+    const soft=st.day[s.day]==='s';
+    return {st,r,assigned,h,soft};
+  }).sort((a,b)=>(a.r?1:0)-(b.r?1:0)||(a.soft?1:0)-(b.soft?1:0)||a.h-b.h);
+  $('#dlgB').innerHTML=rows.map(o=>
+    '<div class="cand"><div class="who"><b>'+esc(o.st.name)+(o.assigned?' <span class="badge b">on this shift</span>':'')+
+    '</b><span>'+h1(o.h)+'h of '+o.st.maxH+'h · '+esc(o.st.roles.join(', '))+
+    (o.soft?' · <span style="color:var(--warn)">asked for '+dayName(s.day)+' off</span>':'')+'</span></div>'+
+    (o.r?'<span class="badge r" title="hard rule">'+esc(o.r)+'</span>':'<span class="badge g">eligible</span>')+
+    '<button class="btn sm'+(o.r?'':' primary')+'" data-pick="'+o.st.id+'">'+(o.r?'Force':'Assign')+'</button></div>'
+  ).join('')||'<div class="none">No team members yet.</div>';
+  $('#dlg').showModal();
+}
+$('#dlgB').addEventListener('click',e=>{
+  const b=e.target.closest('[data-pick]'); if(!b||!cur) return;
+  state.assign[cur]=b.dataset.pick;
+  const s=SLM.get(cur), st=S(b.dataset.pick);
+  const bad=checkAll(st,slotsOf(st.id)).length;
+  if(bad){ state.locks[cur]=true; toast('Forced against a hard rule — slot locked and flagged.','err'); }
+  $('#dlg').close(); render();
+});
+$('#dlgClear').onclick=()=>{ if(cur){delete state.assign[cur];} $('#dlg').close(); render(); };
+$('#dlgClose').onclick=()=>$('#dlg').close();
+$('#dlgLock').onchange=e=>{ if(!cur) return; if(e.target.checked) state.locks[cur]=true; else delete state.locks[cur]; render(); };
+$('#rotaBody').addEventListener('click',e=>{const c=e.target.closest('[data-slot]'); if(c) openSlot(c.dataset.slot);});
+
+/* ------------------------------------------------------------------ edits */
+function parseNeeds(txt){
+  return String(txt).split(',').map(p=>p.trim()).filter(Boolean).map(p=>{
+    const m=/^(.*?)[\s]*(?:[x×*]\s*(\d+))?$/i.exec(p);
+    const role=(m[1]||p).trim()||'Staff';
+    return {role,count:clamp(parseInt(m[2]||'1',10)||1,1,20)};
+  });
+}
+$('#teamBody').addEventListener('change',e=>{
+  const el=e.target.closest('[data-s]'); if(!el) return;
+  const st=S(el.dataset.s); if(!st) return;
+  const k=el.dataset.k;
+  if(k==='name') st.name=el.value.trim()||'Unnamed';
+  else if(k==='roles') st.roles=el.value.split(',').map(x=>x.trim()).filter(Boolean);
+  else if(k==='rate') st.rate=Math.max(0,parseFloat(el.value)||0);
+  else st[k]=clamp(parseInt(el.value,10)||0,0,k==='maxD'?7:80);
+  render();
+});
+$('#teamBody').addEventListener('click',e=>{
+  const a=e.target.closest('[data-av]'), d=e.target.closest('[data-del-s]');
+  if(a){ const st=S(a.dataset.av), i=+a.dataset.d;
+    st.day[i]={y:'s',s:'n',n:'y'}[st.day[i]]; render(); }
+  if(d){ state.staff=state.staff.filter(x=>x.id!==d.dataset.delS);
+    for(const k of Object.keys(state.assign)) if(state.assign[k]===d.dataset.delS) delete state.assign[k];
+    render(); }
+});
+$('#tplBody').addEventListener('change',e=>{
+  const el=e.target.closest('[data-t]'), cb=e.target.closest('[data-day]');
+  if(cb){ const t=T(cb.dataset.day); t.days[+cb.dataset.d]=cb.checked; render(); return; }
+  if(!el) return;
+  const t=T(el.dataset.t), k=el.dataset.k;
+  if(k==='needs') t.needs=parseNeeds(el.value);
+  else if(k==='name') t.name=el.value.trim()||'Shift';
+  else t[k]=m2t(t2m(el.value));
+  render();
+});
+$('#tplBody').addEventListener('click',e=>{
+  const d=e.target.closest('[data-del-t]'); if(!d) return;
+  state.tpls=state.tpls.filter(x=>x.id!==d.dataset.delT); render();
+});
+$('#bAddStaff').onclick=()=>{ state.staff.push(newStaff('New person',['Staff'],30,0,16)); render(); setTab('team'); };
+$('#bAddTpl').onclick=()=>{ state.tpls.push({id:uid('t'),name:'New shift',start:'09:00',end:'17:00',
+  needs:[{role:'Staff',count:1}],days:[false,true,true,true,true,true,false],color:'#5b9dff'}); render(); };
+$('#bBulk').onclick=()=>{
+  const lines=$('#bulk').value.split('\n').map(l=>l.trim()).filter(Boolean);
+  if(!lines.length) return toast('Nothing to add.','err');
+  let n=0;
+  for(const l of lines){
+    const p=l.split('|').map(x=>x.trim());
+    if(!p[0]) continue;
+    state.staff.push(newStaff(p[0],(p[1]||'Staff').split(',').map(x=>x.trim()).filter(Boolean),
+      parseInt(p[2],10)||30, parseInt(p[3],10)||0, parseFloat(p[4])||0));
+    n++;
+  }
+  $('#bulk').value=''; render(); toast(n+' people added.','ok');
+};
+function newStaff(name,roles,maxH,minH,rate){
+  return {id:uid('s'),name,roles,maxH,minH,maxD:5,rate,day:['y','y','y','y','y','y','y']};
+}
+
+/* ------------------------------------------------------------------ opts */
+function bindOpts(){
+  $('#week').value=state.week; $('#rest').value=state.opts.rest;
+  $('#wFair').value=state.opts.wFair; $('#wReq').value=state.opts.wReq; $('#wCont').value=state.opts.wCont;
+  $('#oneADay').checked=state.opts.oneADay; $('#minCost').checked=state.opts.minCost;
+}
+$('#week').onchange=e=>{state.week=e.target.value||nextMonday();render();};
+$('#rest').onchange=e=>{state.opts.rest=clamp(parseInt(e.target.value,10)||0,0,24);render();};
+['wFair','wReq','wCont'].forEach(k=>$('#'+k).oninput=e=>{state.opts[k]=parseFloat(e.target.value);});
+$('#oneADay').onchange=e=>{state.opts.oneADay=e.target.checked;render();};
+$('#minCost').onchange=e=>{state.opts.minCost=e.target.checked;};
+$('#bClear').onclick=()=>{for(const s of SL) if(!state.locks[s.id]) delete state.assign[s.id]; render(); toast('Cleared everything except locked slots.','ok');};
+$('#bUnlock').onclick=()=>{state.locks={};render();toast('All slots unlocked.','ok');};
+$('#bSolve').onclick=solve;
+$('#bTheme').onclick=()=>{const h=document.documentElement;h.dataset.theme=h.dataset.theme==='dark'?'light':'dark';};
+$('#bPrint').onclick=()=>{setTab('rota');setTimeout(()=>window.print(),60);};
+
+/* ------------------------------------------------------------------ tabs */
+function setTab(id){
+
+  $$('.tab').forEach(t=>{const on=t.id==='tab-'+id;t.setAttribute('aria-selected',on?'true':'false');
+    $('#p-'+t.id.slice(4)).hidden=!on;});
+}
+
+$$('.tab').forEach(t=>t.onclick=()=>setTab(t.id.slice(4)));
+document.addEventListener('keydown',e=>{
+  if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)||e.metaKey||e.ctrlKey||$('#dlg').open) return;
+  const T=['rota','team','shift','ins','exp'];
+  if(/^[1-5]$/.test(e.key)){setTab(T[+e.key-1]);e.preventDefault();}
+  if(e.key.toLowerCase()==='b') solve();
+});
+
+/* --------------------------------------------------------------- exports */
+function slotDates(s){
+  const tpl=T(s.tpl), w=weekDate(s.day), [h,mi]=tpl.start.split(':').map(Number);
+  const st=new Date(w.getFullYear(),w.getMonth(),w.getDate(),h||0,mi||0);
+  return [st,new Date(st.getTime()+s.dur*60000)];
+}
+const isoLocal=d=>d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'T'+
+  String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0')+'00';
+const dstr=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+$('#eGrid').onclick=()=>{
+  const rows=[['Shift','Times',...[0,1,2,3,4,5,6].map(i=>dayLabel(i))]];
+  for(const t of state.tpls){
+    rows.push([t.name,t.start+'-'+t.end,...[0,1,2,3,4,5,6].map(d=>{
+      if(!t.days[d]) return '';
+      return SL.filter(s=>s.tpl===t.id&&s.day===d)
+        .map(s=>{const a=state.assign[s.id];return (a?S(a).name:'UNFILLED')+' ('+s.role+')';}).join('; ');
+    })]);
+  }
+  download('shiftforge-rota-grid.csv',toCSV(rows),'text/csv');
+};
+$('#eShifts').onclick=()=>{
+  const rows=[['Date','Day','Shift','Role','Start','End','Hours','Person','Hourly rate','Wage','Locked','Rule breach']];
+  for(const s of SL.slice().sort((a,b)=>a.start-b.start)){
+    const [st,en]=slotDates(s), a=state.assign[s.id], p=a?S(a):null;
+    const br=p?blockReasonStatic(p,s):'';
+    rows.push([dstr(st),dayName(s.day),T(s.tpl).name,s.role,m2t(t2m(T(s.tpl).start)),
+      String(en.getHours()).padStart(2,'0')+':'+String(en.getMinutes()).padStart(2,'0'),
+      (s.dur/60).toFixed(2),p?p.name:'UNFILLED',p?(p.rate||0).toFixed(2):'',
+      p?(s.dur/60*(p.rate||0)).toFixed(2):'',state.locks[s.id]?'yes':'',br||'']);
+  }
+  download('shiftforge-shifts.csv',toCSV(rows),'text/csv');
+};
+$('#eIcs').onclick=()=>{
+  const now=new Date();
+  const stamp=now.getUTCFullYear()+String(now.getUTCMonth()+1).padStart(2,'0')+String(now.getUTCDate()).padStart(2,'0')+'T'+
+    String(now.getUTCHours()).padStart(2,'0')+String(now.getUTCMinutes()).padStart(2,'0')+'00Z';
+  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//ShiftForge//Rota//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+  let n=0;
+  for(const s of SL){
+    const a=state.assign[s.id]; if(!a) continue;
+    const p=S(a), [st,en]=slotDates(s);
+    L.push('BEGIN:VEVENT','UID:'+s.id.replace(/\|/g,'-')+'@shiftforge','DTSTAMP:'+stamp,
+      'DTSTART:'+isoLocal(st),'DTEND:'+isoLocal(en),
+      'SUMMARY:'+T(s.tpl).name+' — '+p.name,
+      'DESCRIPTION:Role: '+s.role+'\\nHours: '+h1(s.dur/60),
+      'END:VEVENT'); n++;
+  }
+  L.push('END:VCALENDAR');
+  if(!n) return toast('Nothing assigned yet — build the rota first.','err');
+  download('shiftforge-rota.ics',L.join('\r\n'),'text/calendar');
+};
+$('#eCopy').onclick=async()=>{
+  const out=['ROTA — week of '+dayLabel(0),''];
+  for(const st of state.staff){
+    const ms=slotsOf(st.id).sort((a,b)=>a.start-b.start);
+    if(!ms.length){ out.push(st.name+': no shifts'); continue; }
+    out.push(st.name+' ('+h1(sum(ms.map(m=>m.dur))/60)+'h)');
+    for(const m of ms){const [a,b]=slotDates(m);
+      out.push('  '+dayName(m.day)+' '+a.getDate()+' '+MO[a.getMonth()]+'  '+T(m.tpl).start+'–'+T(m.tpl).end+'  '+T(m.tpl).name);}
+  }
+  const unf=SL.filter(s=>!state.assign[s.id]);
+  if(unf.length){out.push('','STILL UNCOVERED:');for(const s of unf) out.push('  '+dayName(s.day)+' '+T(s.tpl).name+' ('+s.role+')');}
+  const txt=out.join('\n');
+  try{ await navigator.clipboard.writeText(txt); toast('Rota copied — paste it into your team chat.','ok'); }
+  catch(err){ download('shiftforge-rota.txt',txt); toast('Clipboard blocked, downloaded as a text file instead.','err'); }
+};
+function saveSession(){
+  download('shiftforge-session.json',JSON.stringify({app:'shiftforge',v:1,...state},null,1),'application/json');
+  toast('Saved. No browser storage is used — that file is your rota.','ok');
+}
+$('#bSave').onclick=saveSession; $('#eSess').onclick=saveSession;
+$('#bLoad').onclick=()=>$('#fileIn').click();
+$('#fileIn').addEventListener('change',e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  const fr=new FileReader();
+  fr.onload=()=>{
+    let d; try{ d=JSON.parse(String(fr.result)); }catch(err){ return toast('Not a valid session file.','err'); }
+    if(d.app!=='shiftforge'||!Array.isArray(d.staff)) return toast('Unrecognised session file.','err');
+    state.week=d.week||nextMonday(); state.staff=d.staff; state.tpls=d.tpls||[];
+    state.assign=d.assign||{}; state.locks=d.locks||{}; Object.assign(state.opts,d.opts||{});
+    bindOpts(); render(); toast('Loaded '+state.staff.length+' people and '+state.tpls.length+' shift patterns.','ok');
+  };
+  fr.readAsText(f);
+});
+document.addEventListener('dragover',e=>{if(e.dataTransfer)e.preventDefault();});
+document.addEventListener('drop',e=>{
+  if(!e.dataTransfer||!e.dataTransfer.files.length) return;
+  e.preventDefault();
+  const f=e.dataTransfer.files[0];
+  const fr=new FileReader();
+  fr.onload=()=>{ try{ const d=JSON.parse(String(fr.result));
+    if(d.app==='shiftforge'){ state.week=d.week; state.staff=d.staff; state.tpls=d.tpls||[];
+      state.assign=d.assign||{}; state.locks=d.locks||{}; Object.assign(state.opts,d.opts||{});
+      bindOpts(); render(); toast('Session restored.','ok'); } }catch(err){ toast('Could not read that file.','err'); } };
+  fr.readAsText(f);
+});
+
+/* ------------------------------------------------------------------ demo */
+function demo(){
+  state.week=nextMonday();
+  const mk=(n,r,mx,mn,rate,days,maxD)=>{const s=newStaff(n,r,mx,mn,rate);s.maxD=maxD||5;
+    if(days) s.day=days.split('');return s;};
+  state.staff=[
+    mk('Amara Diallo',['Lead','Barista'],38,30,16.5,'yyyyyyn',5),
+    mk('Tomas Vrba',['Lead','Barista','Kitchen'],40,32,16.0,'yyyyyys',6),
+    mk('Priya Raman',['Barista'],30,20,13.5,'yyynyyy',5),
+    mk('Jonah Beck',['Barista','Kitchen'],24,12,13.0,'nyysyyy',4),
+    mk('Lena Fischer',['Kitchen','Barista'],36,28,14.75,'yyyyysn',5),
+    mk('Sam Ortiz',['Barista'],16,8,12.75,'ssnnnyy',3),
+    mk('Ruth Nakamura',['Lead','Kitchen'],32,24,17.25,'ynyyyyy',5),
+    mk('Deniz Aydin',['Barista','Kitchen'],28,16,13.25,'yyyyyns',5)
+  ];
+  state.tpls=[
+    {id:'t_open',name:'Open',start:'06:30',end:'13:00',needs:[{role:'Lead',count:1},{role:'Barista',count:1}],
+      days:[true,true,true,true,true,true,true],color:'#5b9dff'},
+    {id:'t_mid',name:'Mid / prep',start:'10:00',end:'18:00',needs:[{role:'Kitchen',count:1},{role:'Barista',count:1}],
+      days:[false,true,true,true,true,true,true],color:'#b98bfa'},
+    {id:'t_close',name:'Close',start:'13:00',end:'20:30',needs:[{role:'Lead',count:1},{role:'Barista',count:1}],
+      days:[true,true,true,true,true,true,true],color:'#2dd4bf'},
+    {id:'t_rush',name:'Weekend rush cover',start:'11:00',end:'16:00',needs:[{role:'Barista',count:2}],
+      days:[true,false,false,false,false,false,true],color:'#ffb454'}
+  ];
+  state.assign={}; state.locks={};
+  bindOpts(); solve();
+}
+$('#bDemo').onclick=demo;
+
+/* ------------------------------------------------------------------ boot */
+state.week=nextMonday();
+bindOpts(); demo(); setTab('rota');
+toast('Demo café loaded and solved. Click any name to reassign, 🔒 to pin it, then rebuild.','ok');
+})();
+</script>
+</body>
+</html>

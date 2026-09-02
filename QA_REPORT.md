@@ -6,8 +6,8 @@ This file records the final validation of the delivered portfolio. Source inspec
 
 - Production build
 - TypeScript/React lint
-- Ten unique product records
-- Ten matching deployed HTML demos
+- Fourteen unique product records
+- Fourteen matching deployed HTML demos
 - Valid title and viewport metadata on every app
 - Inline JavaScript syntax check for every app
 - Duplicate HTML ID scan
@@ -16,7 +16,7 @@ This file records the final validation of the delivered portfolio. Source inspec
 
 ## Browser test matrix
 
-The final browser pass completed on August 29, 2026 and covered:
+The final browser pass completed on September 2, 2026 and covered:
 
 - Homepage anchors, sticky navigation, mobile navigation, category filters, product count, and project-brief copy action
 - Every product card and every shared demo route
@@ -40,6 +40,10 @@ App routes and representative interactions tested:
 - IronRedact: licence dialog opened; PDF processing remains dependent on a user-selected local PDF.
 - BlackBar: privacy audit dialog opened; mobile tools drawer was added and verified by responsive rules.
 - SitePulse: URL audit ran; rate-limited/unavailable public services produced the labeled demo fallback with 72/84/91/88 example scores instead of a broken screen.
+- CoreCred: return tracking and vendor-credit recovery queue loaded with locally saved demo data.
+- FreightDue: sample rate-confirmation analysis surfaced accessorial rules and recovery workflow controls.
+- LedgerLens: demo ledger analysis populated recurring-charge, duplicate, fee, price-hike, and spending-pattern findings.
+- ShiftForge: demo team loaded and the constraint-aware rota solver produced a weekly schedule.
 
 Expected environment-only log noise was excluded: the testing browser extension mutates the root HTML before React hydration. SitePulse reports its handled live-service failures as warnings before presenting the labeled fallback. No unhandled application exception was found in the tested flows.
 

@@ -18,6 +18,10 @@
 - **BlackBar:** preserved browser redaction, batch handling, pattern scan, Bates, export, and audit workflows. Added a functional mobile tools drawer; removed the placeholder purchase link; corrected startup-network language.
 - **QuoteFast:** preserved quote/invoice editing, totals, client memory, local autosave, print, and copy. Added a clipboard fallback so Copy as text does not fail silently when Clipboard API access is denied.
 - **SitePulse:** removed an unused external chart dependency, requested all PageSpeed categories, fixed severity sorting, sanitized audit/history rendering, removed the fake Stripe destination and unverified success activation, and added a clearly labeled demo-report fallback when live audit services fail.
+- **CoreCred:** integrated the supplied parts-return credit recovery workflow, preserving local storage, vendor queues, statement scanning, and export behavior.
+- **FreightDue:** integrated the supplied accessorial revenue recovery workflow, preserving detention capture, rate-confirmation scanning, proof packets, and payment chasing.
+- **LedgerLens:** integrated the supplied offline CSV auditor with recurring-charge, duplicate, fee, price-hike, and spending-pattern analysis.
+- **ShiftForge:** integrated the supplied offline rota solver with coverage, availability, rest, fairness, contracted-hours, wage-cost, and export controls.
 
 ## Supplied orphan files
 

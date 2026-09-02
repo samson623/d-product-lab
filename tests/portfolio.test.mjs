@@ -6,16 +6,16 @@ import path from "node:path";
 const root = process.cwd();
 const appDir = path.join(root, "public", "apps");
 
-test("portfolio defines ten unique product demos", async () => {
+test("portfolio defines fourteen unique product demos", async () => {
   const source = await readFile(path.join(root, "app", "products.ts"), "utf8");
   const slugs = [...source.matchAll(/slug:\s*"([^"]+)"/g)].map((match) => match[1]);
-  assert.equal(slugs.length, 10);
-  assert.equal(new Set(slugs).size, 10);
+  assert.equal(slugs.length, 14);
+  assert.equal(new Set(slugs).size, 14);
 });
 
-test("all ten normalized HTML demos exist and are structurally valid", async () => {
+test("all fourteen normalized HTML demos exist and are structurally valid", async () => {
   const files = (await readdir(appDir)).filter((file) => file.endsWith(".html")).sort();
-  assert.equal(files.length, 10);
+  assert.equal(files.length, 14);
   for (const file of files) {
     const html = await readFile(path.join(appDir, file), "utf8");
     assert.match(html, /<title>[^<]+<\/title>/i, `${file} needs a title`);

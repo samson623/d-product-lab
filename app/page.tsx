@@ -49,7 +49,7 @@ export default function Home() {
         </div>
         <div className="hero-system" aria-label="Product lab focus areas">
           <div className="signal-top"><span>PRODUCT SYSTEM / 01</span><span className="live-dot"><i /> ACTIVE LAB</span></div>
-          <div className="system-core"><div className="core-number">10</div><div><strong>interactive products</strong><span>built around measurable business friction</span></div></div>
+          <div className="system-core"><div className="core-number">14</div><div><strong>interactive products</strong><span>built around measurable business friction</span></div></div>
           <div className="system-list"><span><i>01</i> Protect margin</span><span><i>02</i> Reduce admin</span><span><i>03</i> Clarify decisions</span><span><i>04</i> Ship faster</span></div>
           <div className="system-footer"><span>AI + SOFTWARE + DESIGN</span><Layers3 /></div>
         </div>

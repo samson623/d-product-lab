@@ -6,7 +6,7 @@ A professional, extensible portfolio for D's working software products and produ
 
 - Premium responsive portfolio homepage
 - Working category filters
-- One portfolio listing for each of the 10 distinct supplied apps
+- One portfolio listing for each of the 14 distinct supplied apps
 - A consistent demo launcher with an obvious return path
 - Repaired production copies in `public/apps/`
 - Untouched supplied references in `source_apps/original/`
